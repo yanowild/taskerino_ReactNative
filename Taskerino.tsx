@@ -31,9 +31,100 @@ const celebrations = [
 
 const confettiColors = ['#8FB996', '#A8D5BA', '#C4B7D6', '#9DC4D8', '#E8D5A3', '#B5D4C8'];
 
+const tips = [
+  {
+    id: 1,
+    emoji: "🌱",
+    title: "Start Small",
+    description: "It's totally okay to add just one task at a time. Small steps lead to big wins! You don't need to plan your entire life today."
+  },
+  {
+    id: 2,
+    emoji: "🎯",
+    title: "Pick Your Top 3",
+    description: "Feeling overwhelmed? Choose just 3 tasks that matter most today. Everything else can wait, and that's perfectly fine."
+  },
+  {
+    id: 3,
+    emoji: "🧘",
+    title: "It's Okay to Rest",
+    description: "Some days are for crushing goals, some are for recharging. Both are important. Be kind to yourself."
+  },
+  {
+    id: 4,
+    emoji: "📅",
+    title: "Tomorrow Exists",
+    description: "Didn't finish today? No worries! Tasks can move to tomorrow. Progress isn't linear, and that's normal."
+  },
+  {
+    id: 5,
+    emoji: "🎉",
+    title: "Celebrate Small Wins",
+    description: "Made your bed? That counts! Sent one email? Amazing! Every completed task is worth celebrating, no matter how small."
+  },
+  {
+    id: 6,
+    emoji: "🌙",
+    title: "Evening Brain Dump",
+    description: "Before bed, jot down tomorrow's thoughts. It helps clear your mind and you'll wake up with a gentle plan ready."
+  },
+  {
+    id: 7,
+    emoji: "⏰",
+    title: "Time Estimates Are Tricky",
+    description: "Tasks often take longer than expected, and that's okay! Be flexible with yourself and adjust as you go."
+  },
+  {
+    id: 8,
+    emoji: "🔄",
+    title: "Weekly Reset",
+    description: "Once a week, review and declutter your tasks. It's a fresh start, not a judgment of what you didn't do."
+  },
+  {
+    id: 9,
+    emoji: "💚",
+    title: "You're Doing Great",
+    description: "The fact that you're here, trying to organize your life? That's already an accomplishment. Be proud of yourself!"
+  },
+  {
+    id: 10,
+    emoji: "🌈",
+    title: "Perfect Doesn't Exist",
+    description: "Your task list doesn't need to be perfect. Done is better than perfect. Progress over perfection, always."
+  },
+  {
+    id: 11,
+    emoji: "🎈",
+    title: "Break It Down",
+    description: "Big task feeling scary? Break it into tiny pieces. Instead of 'Clean house', try 'Pick up 5 things' first."
+  },
+  {
+    id: 12,
+    emoji: "☕",
+    title: "Energy Over Time",
+    description: "Do important tasks when you have the most energy. Low energy? That's the time for easy, mindless tasks."
+  }
+];
+
+const badges = [
+  { id: 1, emoji: "🌱", title: "Seedling", description: "Created your first task", detailedDescription: "Welcome to Taskerino! This badge celebrates your very first task. Every journey starts with a single step!", requirement: 1, type: "tasks" },
+  { id: 2, emoji: "🌿", title: "Growing", description: "Created 10 tasks", detailedDescription: "You're building momentum! 10 tasks created shows you're taking action and organizing your life.", requirement: 10, type: "tasks" },
+  { id: 3, emoji: "🌳", title: "Flourishing", description: "Created 50 tasks", detailedDescription: "Amazing progress! 50 tasks means you're fully embracing task management. Keep flourishing!", requirement: 50, type: "tasks" },
+  { id: 4, emoji: "🔥", title: "On Fire", description: "Used the app 3 days in a row", detailedDescription: "Consistency is key! You've used Taskerino for 3 consecutive days. That's how habits are built!", requirement: 3, type: "streak" },
+  { id: 5, emoji: "⚡", title: "Lightning", description: "Used the app 7 days in a row", detailedDescription: "One full week of dedication! You're making this a real habit. Your streak is electrifying!", requirement: 7, type: "streak" },
+  { id: 6, emoji: "💫", title: "Cosmic", description: "Used the app 30 days in a row", detailedDescription: "Out of this world! A full month of daily use. You've reached cosmic levels of commitment!", requirement: 30, type: "streak" },
+  { id: 7, emoji: "✨", title: "First Win", description: "Completed your first task", detailedDescription: "You did it! Completing your first task is a special moment. Here's to many more victories!", requirement: 1, type: "completed" },
+  { id: 8, emoji: "⭐", title: "Star Player", description: "Completed 25 tasks", detailedDescription: "Look at you go! 25 completed tasks proves you're not just creating tasks, you're crushing them!", requirement: 25, type: "completed" },
+  { id: 9, emoji: "🏆", title: "Champion", description: "Completed 100 tasks", detailedDescription: "Legendary status achieved! 100 completed tasks makes you a true productivity champion!", requirement: 100, type: "completed" },
+  { id: 10, emoji: "🎯", title: "Focused", description: "Completed all tasks in a day", detailedDescription: "Perfect execution! You completed every task you set for yourself in a single day. That's focus!", requirement: 1, type: "perfect_day" },
+  { id: 11, emoji: "🚀", title: "Skyrocket", description: "Created 10 tasks in one day", detailedDescription: "Super productive day! Creating 10+ tasks shows serious planning energy. You're on fire!", requirement: 10, type: "productive_day" },
+  { id: 12, emoji: "🌟", title: "Steady", description: "Completed tasks 5 days in a row", detailedDescription: "Steady wins the race! Completing tasks 5 days straight shows true dedication to progress.", requirement: 5, type: "completion_streak" },
+];
+
 const colors = {
   bgCream: '#F7F6F3', bgPeach: '#E8E4DD', sage: '#8FB996', sageDark: '#6A9B72',
-  mint: '#A8D5BA', mintDark: '#7EC492', lavender: '#C4B7D6', textDark: '#4A4F4B', textMuted: '#8A8F8B', white: '#FFFFFF'
+  mint: '#A8D5BA', mintDark: '#7EC492', lavender: '#C4B7D6', textDark: '#4A4F4B', textMuted: '#8A8F8B', white: '#FFFFFF',
+  gold: '#FFD700', silver: '#C0C0C0', bronze: '#CD7F32'
 };
 
 interface Task {
@@ -135,6 +226,14 @@ function SettingsIcon({ color = colors.textMuted }: { color?: string }) {
   );
 }
 
+function LightbulbIcon({ color = colors.textMuted }: { color?: string }) {
+  return (
+    <Svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M9 21h6M12 3a6 6 0 0 0-6 6c0 3.5 2 5 3 7h6c1-2 3-3.5 3-7a6 6 0 0 0-6-6z" />
+    </Svg>
+  );
+}
+
 function TaskItem({ task, onToggle, onDelete }: { task: Task; onToggle: (id: number) => void; onDelete: (id: number) => void }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -228,16 +327,59 @@ export default function Taskerino() {
   const [greeting, setGreeting] = useState('');
   const [confetti, setConfetti] = useState<Array<{ id: number; x: number; color: string; delay: number }>>([]);
   const [celebration, setCelebration] = useState<{ emoji: string; text: string } | null>(null);
-  const [currentTab, setCurrentTab] = useState<'tasks' | 'calendar' | 'profile' | 'settings'>('tasks');
+  const [currentTab, setCurrentTab] = useState<'tasks' | 'calendar' | 'profile' | 'tips' | 'settings'>('tasks');
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [lastLoginDate, setLastLoginDate] = useState<string>('');
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const [selectedBadge, setSelectedBadge] = useState<typeof badges[0] | null>(null);
+  const [showBadgeModal, setShowBadgeModal] = useState(false);
 
   useEffect(() => {
     loadTasks();
+    loadStreakData();
     const hour = new Date().getHours();
     const time = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
     setGreeting(greetings[time][Math.floor(Math.random() * greetings[time].length)]);
   }, []);
+
+  const loadStreakData = async () => {
+    try {
+      const lastLogin = await AsyncStorage.getItem('taskerino-last-login');
+      const streak = await AsyncStorage.getItem('taskerino-streak');
+      const today = formatDate(new Date());
+
+      if (lastLogin) {
+        const lastDate = new Date(lastLogin + 'T00:00:00');
+        const todayDate = new Date(today + 'T00:00:00');
+        const diffTime = todayDate.getTime() - lastDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+          // Same day, keep streak
+          setCurrentStreak(parseInt(streak || '0'));
+        } else if (diffDays === 1) {
+          // Next day, increment streak
+          const newStreak = parseInt(streak || '0') + 1;
+          setCurrentStreak(newStreak);
+          await AsyncStorage.setItem('taskerino-streak', newStreak.toString());
+        } else {
+          // Streak broken, reset
+          setCurrentStreak(1);
+          await AsyncStorage.setItem('taskerino-streak', '1');
+        }
+      } else {
+        // First time
+        setCurrentStreak(1);
+        await AsyncStorage.setItem('taskerino-streak', '1');
+      }
+
+      setLastLoginDate(today);
+      await AsyncStorage.setItem('taskerino-last-login', today);
+    } catch (error) {
+      console.error('Failed to load streak data:', error);
+    }
+  };
 
   useEffect(() => {
     saveTasks();
@@ -323,47 +465,265 @@ export default function Taskerino() {
     }
   }, [celebration]);
 
+  // Calculate badge progress
+  const getUnlockedBadges = () => {
+    const completedCount = tasks.filter(t => t.completed).length;
+    const tasksCreated = tasks.length;
+
+    return badges.map(badge => {
+      let unlocked = false;
+      let progress = 0;
+
+      switch (badge.type) {
+        case 'tasks':
+          progress = tasksCreated;
+          unlocked = tasksCreated >= badge.requirement;
+          break;
+        case 'completed':
+          progress = completedCount;
+          unlocked = completedCount >= badge.requirement;
+          break;
+        case 'streak':
+          progress = currentStreak;
+          unlocked = currentStreak >= badge.requirement;
+          break;
+        case 'perfect_day':
+        case 'productive_day':
+          // These would need more complex tracking, simplified for now
+          unlocked = false;
+          break;
+      }
+
+      return { ...badge, unlocked, progress };
+    });
+  };
+
   const renderContent = () => {
     if (currentTab === 'profile') {
+      const unlockedBadges = getUnlockedBadges();
+      const earnedCount = unlockedBadges.filter(b => b.unlocked).length;
+
       return (
-        <View style={styles.centerContent}>
-          <View style={styles.profileContainer}>
+        <View style={{ paddingTop: insets.top + 20 }}>
+          <View style={styles.profileHeader}>
             <View style={styles.profileAvatarContainer}>
               <Mascot size={100} />
             </View>
             <Text style={styles.profileName}>Task Master</Text>
-            <Text style={styles.profileSubtitle}>Keep crushing it! 💪</Text>
+            <Text style={styles.profileSubtitle}>You're doing amazing! 💚</Text>
 
             <View style={styles.profileStats}>
               <View style={styles.profileStatItem}>
                 <Text style={styles.profileStatNumber}>{tasks.length}</Text>
-                <Text style={styles.profileStatLabel}>Total Tasks</Text>
+                <Text style={styles.profileStatLabel}>Tasks Created</Text>
               </View>
               <View style={styles.profileStatItem}>
-                <Text style={styles.profileStatNumber}>{tasks.filter(t => t.completed).length}</Text>
-                <Text style={styles.profileStatLabel}>Completed</Text>
+                <Text style={[styles.profileStatNumber, { color: colors.mint }]}>🔥 {currentStreak}</Text>
+                <Text style={styles.profileStatLabel}>Day Streak</Text>
               </View>
               <View style={styles.profileStatItem}>
-                <Text style={styles.profileStatNumber}>{Math.round((tasks.filter(t => t.completed).length / (tasks.length || 1)) * 100)}%</Text>
-                <Text style={styles.profileStatLabel}>Success Rate</Text>
+                <Text style={[styles.profileStatNumber, { color: colors.lavender }]}>{earnedCount}</Text>
+                <Text style={styles.profileStatLabel}>Badges Earned</Text>
               </View>
             </View>
           </View>
+
+          <ScrollView style={styles.badgesList} contentContainerStyle={{ paddingBottom: 20 }}>
+            <Text style={styles.badgesSectionTitle}>🏆 Achievements</Text>
+
+            {/* Tasks Category */}
+            <Text style={styles.badgeCategoryTitle}>🌱 Creation Journey</Text>
+            <View style={styles.badgesRow}>
+              {unlockedBadges.filter(b => b.type === 'tasks').map((badge) => (
+                <TouchableOpacity
+                  key={badge.id}
+                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  onPress={() => {
+                    setSelectedBadge(badge);
+                    setShowBadgeModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
+                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  {!badge.unlocked && (
+                    <Text style={styles.badgeMiniProgress}>{badge.progress}/{badge.requirement}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Streak Category */}
+            <Text style={styles.badgeCategoryTitle}>🔥 Streak Power</Text>
+            <View style={styles.badgesRow}>
+              {unlockedBadges.filter(b => b.type === 'streak').map((badge) => (
+                <TouchableOpacity
+                  key={badge.id}
+                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  onPress={() => {
+                    setSelectedBadge(badge);
+                    setShowBadgeModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
+                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  {!badge.unlocked && (
+                    <Text style={styles.badgeMiniProgress}>{badge.progress}/{badge.requirement}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Completion Category */}
+            <Text style={styles.badgeCategoryTitle}>✨ Completion Master</Text>
+            <View style={styles.badgesRow}>
+              {unlockedBadges.filter(b => b.type === 'completed').map((badge) => (
+                <TouchableOpacity
+                  key={badge.id}
+                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  onPress={() => {
+                    setSelectedBadge(badge);
+                    setShowBadgeModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
+                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  {!badge.unlocked && (
+                    <Text style={styles.badgeMiniProgress}>{badge.progress}/{badge.requirement}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Special Category */}
+            <Text style={styles.badgeCategoryTitle}>🎯 Special Achievements</Text>
+            <View style={styles.badgesRow}>
+              {unlockedBadges.filter(b => b.type === 'perfect_day' || b.type === 'productive_day' || b.type === 'completion_streak').map((badge) => (
+                <TouchableOpacity
+                  key={badge.id}
+                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  onPress={() => {
+                    setSelectedBadge(badge);
+                    setShowBadgeModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
+                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  {!badge.unlocked && (
+                    <Text style={styles.badgeMiniProgress}>Locked</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      );
+    }
+
+    if (currentTab === 'tips') {
+      return (
+        <View style={{ paddingTop: insets.top + 20 }}>
+          <View style={styles.tipsHeader}>
+            <Mascot size={70} />
+            <Text style={styles.tipsTitle}>Friendly Tips</Text>
+            <Text style={styles.tipsSubtitle}>No pressure, just gentle guidance 💚</Text>
+          </View>
+          <ScrollView style={styles.tipsList} contentContainerStyle={{ paddingBottom: 20 }}>
+            {tips.map((tip) => (
+              <View key={tip.id} style={styles.tipCard}>
+                <Text style={styles.tipEmoji}>{tip.emoji}</Text>
+                <View style={styles.tipContent}>
+                  <Text style={styles.tipTitle}>{tip.title}</Text>
+                  <Text style={styles.tipDescription}>{tip.description}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
         </View>
       );
     }
 
     if (currentTab === 'settings') {
       return (
-        <View style={styles.centerContent}>
-          <View style={styles.settingsContainer}>
+        <ScrollView style={{ paddingTop: insets.top + 20 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
+          <View style={styles.settingsHeader}>
             <Text style={styles.settingsTitle}>Settings</Text>
-            <Text style={styles.settingsSubtitle}>More features coming soon! 🚀</Text>
-            <View style={styles.settingsItem}>
-              <Text style={styles.settingsItemText}>Version 1.0.0</Text>
+            <Text style={styles.settingsSubtitle}>Customize your experience</Text>
+          </View>
+
+          {/* Pro Section */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.settingsSectionTitle}>⭐ Taskerino Pro</Text>
+            <View style={styles.proCard}>
+              <View style={styles.proHeader}>
+                <Text style={styles.proTitle}>Upgrade to Pro</Text>
+                <View style={styles.proBadge}>
+                  <Text style={styles.proBadgeText}>✨ Premium</Text>
+                </View>
+              </View>
+              <Text style={styles.proDescription}>Unlock powerful features and support development!</Text>
+
+              <View style={styles.proFeatures}>
+                <View style={styles.proFeature}>
+                  <Text style={styles.proFeatureIcon}>🎨</Text>
+                  <Text style={styles.proFeatureText}>Custom themes & colors</Text>
+                </View>
+                <View style={styles.proFeature}>
+                  <Text style={styles.proFeatureIcon}>☁️</Text>
+                  <Text style={styles.proFeatureText}>Cloud sync across devices</Text>
+                </View>
+                <View style={styles.proFeature}>
+                  <Text style={styles.proFeatureIcon}>📊</Text>
+                  <Text style={styles.proFeatureText}>Advanced statistics</Text>
+                </View>
+                <View style={styles.proFeature}>
+                  <Text style={styles.proFeatureIcon}>🔔</Text>
+                  <Text style={styles.proFeatureText}>Smart reminders</Text>
+                </View>
+                <View style={styles.proFeature}>
+                  <Text style={styles.proFeatureIcon}>🏅</Text>
+                  <Text style={styles.proFeatureText}>Exclusive badges</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.proButton} activeOpacity={0.8}>
+                <Text style={styles.proButtonText}>Get Pro - $4.99/month</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.restoreButton}>
+                <Text style={styles.restoreButtonText}>Restore Purchase</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
+
+          {/* App Info */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.settingsSectionTitle}>ℹ️ App Info</Text>
+            <View style={styles.settingsCard}>
+              <View style={styles.settingsRow}>
+                <Text style={styles.settingsLabel}>Version</Text>
+                <Text style={styles.settingsValue}>1.0.0</Text>
+              </View>
+              <View style={styles.settingsRow}>
+                <Text style={styles.settingsLabel}>Made with</Text>
+                <Text style={styles.settingsValue}>💚 & React Native</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Support */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.settingsSectionTitle}>💬 Support</Text>
+            <TouchableOpacity style={styles.settingsCard}>
+              <Text style={styles.settingsLink}>Send Feedback</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.settingsCard}>
+              <Text style={styles.settingsLink}>Rate on App Store</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       );
     }
 
@@ -475,6 +835,58 @@ export default function Taskerino() {
         </View>
       )}
 
+      {/* Badge Detail Modal */}
+      <Modal visible={showBadgeModal} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setShowBadgeModal(false)}
+          >
+            <View style={styles.badgeModalContent}>
+              {selectedBadge && (
+                <View style={styles.badgeDetailCard}>
+                  <TouchableOpacity onPress={() => setShowBadgeModal(false)} style={styles.badgeCloseButton}>
+                    <CloseIcon />
+                  </TouchableOpacity>
+
+                  <Text style={[styles.badgeDetailEmoji, !selectedBadge.unlocked && styles.badgeLocked]}>{selectedBadge.emoji}</Text>
+                  <Text style={styles.badgeDetailTitle}>{selectedBadge.title}</Text>
+
+                  {selectedBadge.unlocked ? (
+                    <View style={styles.badgeUnlockedBanner}>
+                      <Text style={styles.badgeUnlockedText}>✓ Unlocked!</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.badgeLockedBanner}>
+                      <Text style={styles.badgeLockedText}>🔒 Locked</Text>
+                    </View>
+                  )}
+
+                  <Text style={styles.badgeDetailDescription}>{selectedBadge.detailedDescription}</Text>
+
+                  {!selectedBadge.unlocked && (
+                    <View style={styles.badgeDetailProgress}>
+                      <Text style={styles.badgeDetailProgressLabel}>Your Progress</Text>
+                      <View style={styles.badgeDetailProgressBar}>
+                        <View style={[styles.badgeDetailProgressFill, { width: `${Math.min((selectedBadge.progress / selectedBadge.requirement) * 100, 100)}%` }]} />
+                      </View>
+                      <Text style={styles.badgeDetailProgressText}>
+                        {selectedBadge.progress} / {selectedBadge.requirement}
+                      </Text>
+                    </View>
+                  )}
+
+                  <TouchableOpacity style={styles.badgeDetailButton} onPress={() => setShowBadgeModal(false)}>
+                    <Text style={styles.badgeDetailButtonText}>Got it!</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       {/* Calendar Modal */}
       <Modal visible={showCalendarModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -543,6 +955,15 @@ export default function Taskerino() {
         >
           <CalendarIcon color={colors.textMuted} />
           <Text style={styles.navLabel}>Calendar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setCurrentTab('tips')}
+          style={styles.navItem}
+          activeOpacity={0.7}
+        >
+          <LightbulbIcon color={currentTab === 'tips' ? colors.sage : colors.textMuted} />
+          <Text style={[styles.navLabel, currentTab === 'tips' && { color: colors.sage }]}>Tips</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -849,10 +1270,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   navLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: colors.textMuted,
     marginTop: 4,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -953,17 +1375,22 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: '600',
   },
+  profileHeader: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
   profileStats: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 32,
+    gap: 12,
+    marginTop: 24,
     width: '100%',
   },
   profileStatItem: {
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
     shadowColor: '#4A4F4B',
     shadowOffset: { width: 0, height: 4 },
@@ -972,49 +1399,381 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   profileStatNumber: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: colors.sage,
     marginBottom: 4,
   },
   profileStatLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: colors.textMuted,
     textAlign: 'center',
   },
-  settingsContainer: {
-    alignItems: 'center',
-    width: '100%',
+  badgesList: {
     paddingHorizontal: 20,
   },
-  settingsTitle: {
+  badgesSectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  badgeCategoryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textMuted,
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  badgeMini: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    minHeight: 110,
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 2,
+    borderColor: colors.gold,
+  },
+  badgeMiniLocked: {
+    borderColor: colors.bgPeach,
+    opacity: 0.6,
+  },
+  badgeMiniEmoji: {
+    fontSize: 32,
+    marginBottom: 6,
+  },
+  badgeLocked: {
+    opacity: 0.3,
+  },
+  badgeMiniTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textDark,
+    textAlign: 'center',
+    flexWrap: 'wrap',
+  },
+  badgeMiniProgress: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  badgeModalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  badgeDetailCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 10,
+    alignItems: 'center',
+  },
+  badgeCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 8,
+    zIndex: 1,
+  },
+  badgeDetailEmoji: {
+    fontSize: 80,
+    marginBottom: 16,
+  },
+  badgeDetailTitle: {
     fontSize: 28,
     fontWeight: '800',
     color: colors.textDark,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  badgeUnlockedBanner: {
+    backgroundColor: colors.mint,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  badgeUnlockedText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  badgeLockedBanner: {
+    backgroundColor: colors.bgPeach,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  badgeLockedText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.textMuted,
+  },
+  badgeDetailDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  badgeDetailProgress: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  badgeDetailProgressLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textDark,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  badgeDetailProgressBar: {
+    height: 12,
+    backgroundColor: colors.bgPeach,
+    borderRadius: 6,
+    overflow: 'hidden',
     marginBottom: 8,
   },
-  settingsSubtitle: {
+  badgeDetailProgressFill: {
+    height: '100%',
+    backgroundColor: colors.sage,
+    borderRadius: 6,
+  },
+  badgeDetailProgressText: {
     fontSize: 16,
+    fontWeight: '800',
+    color: colors.sage,
+    textAlign: 'center',
+  },
+  badgeDetailButton: {
+    backgroundColor: colors.sage,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    shadowColor: colors.sageDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  badgeDetailButtonText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  settingsHeader: {
+    marginBottom: 24,
+  },
+  settingsTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 4,
+  },
+  settingsSubtitle: {
+    fontSize: 15,
     color: colors.textMuted,
     fontWeight: '600',
+  },
+  settingsSection: {
     marginBottom: 32,
   },
-  settingsItem: {
+  settingsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 12,
+  },
+  settingsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  settingsLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textDark,
+  },
+  settingsValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  settingsLink: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.sage,
+    textAlign: 'center',
+  },
+  proCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: colors.gold,
+  },
+  proHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  proTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textDark,
+  },
+  proBadge: {
+    backgroundColor: colors.lavender,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  proBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  proDescription: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginBottom: 20,
+  },
+  proFeatures: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  proFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  proFeatureIcon: {
+    fontSize: 20,
+  },
+  proFeatureText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textDark,
+  },
+  proButton: {
+    backgroundColor: colors.sage,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: colors.sageDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  proButtonText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  restoreButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  restoreButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  tipsHeader: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  tipsTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  tipsSubtitle: {
+    fontSize: 15,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  tipsList: {
+    paddingHorizontal: 20,
+  },
+  tipCard: {
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
-    width: '100%',
+    marginBottom: 16,
+    flexDirection: 'row',
+    gap: 16,
     shadowColor: '#4A4F4B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
   },
-  settingsItemText: {
-    fontSize: 14,
-    fontWeight: '600',
+  tipEmoji: {
+    fontSize: 40,
+    marginTop: 4,
+  },
+  tipContent: {
+    flex: 1,
+  },
+  tipTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 8,
+  },
+  tipDescription: {
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.textMuted,
-    textAlign: 'center',
+    fontWeight: '500',
   },
 });
