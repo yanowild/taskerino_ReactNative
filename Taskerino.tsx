@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Animated,
-  Dimensions,
   Modal,
-  FlatList,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
 
 const greetings = {
   morning: ["Good morning, superstar! ☀️", "Rise and shine! Ready to conquer?", "A fresh day, a fresh start!"],
@@ -121,10 +118,33 @@ const badges = [
   { id: 12, emoji: "🌟", title: "Steady", description: "Completed tasks 5 days in a row", detailedDescription: "Steady wins the race! Completing tasks 5 days straight shows true dedication to progress.", requirement: 5, type: "completion_streak" },
 ];
 
+const themeColors = {
+  sage: { primary: '#8FB996', dark: '#6A9B72', light: '#A8D5BA' },
+  ocean: { primary: '#6B9DC4', dark: '#4A7BA7', light: '#8DB4D8' },
+  lavender: { primary: '#B89FD9', dark: '#9378BA', light: '#C4B7D6' },
+  coral: { primary: '#E8967D', dark: '#D17159', light: '#F0B39E' },
+  rose: { primary: '#E89FB5', dark: '#D17A95', light: '#F0BAC8' },
+  midnight: { primary: '#6B7B9D', dark: '#4A5A7A', light: '#8A9AB8' },
+};
+
 const colors = {
-  bgCream: '#F7F6F3', bgPeach: '#E8E4DD', sage: '#8FB996', sageDark: '#6A9B72',
-  mint: '#A8D5BA', mintDark: '#7EC492', lavender: '#C4B7D6', textDark: '#4A4F4B', textMuted: '#8A8F8B', white: '#FFFFFF',
-  gold: '#FFD700', silver: '#C0C0C0', bronze: '#CD7F32'
+  bgCream: '#F7F6F3',
+  bgPeach: '#E8E4DD',
+  bgDark: '#1A1A1A',
+  bgDarkCard: '#2A2A2A',
+  sage: '#8FB996',
+  sageDark: '#6A9B72',
+  mint: '#A8D5BA',
+  mintDark: '#7EC492',
+  lavender: '#C4B7D6',
+  textDark: '#4A4F4B',
+  textMuted: '#8A8F8B',
+  textLight: '#E8E8E8',
+  textLightMuted: '#A8A8A8',
+  white: '#FFFFFF',
+  gold: '#FFD700',
+  silver: '#C0C0C0',
+  bronze: '#CD7F32'
 };
 
 interface Task {
@@ -132,6 +152,12 @@ interface Task {
   text: string;
   completed: boolean;
   date: string; // YYYY-MM-DD format
+}
+
+interface Goal {
+  id: number;
+  text: string;
+  completed: boolean;
 }
 
 function Mascot({ size = 90 }: { size?: number }) {
@@ -144,29 +170,36 @@ function Mascot({ size = 90 }: { size?: number }) {
         Animated.timing(bounceAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
       ])
     ).start();
-  }, []);
+  }, [bounceAnim]);
 
   const s = size / 90;
 
   return (
     <Animated.View style={[{ width: size, height: size }, { transform: [{ translateY: bounceAnim }] }]}>
+        {/* eslint-disable-next-line react-native/no-inline-styles */}
       <View style={{
-        width: '100%', height: '100%', borderRadius: size / 2, backgroundColor: colors.sage,
-        shadowColor: colors.sageDark, shadowOffset: { width: 0, height: 8 * s }, shadowOpacity: 0.3, shadowRadius: 0
+        width: '100%', height: '100%', borderRadius: size / 2, backgroundColor: colors.sage
       }}>
         {/* Left eye white */}
+          {/* eslint-disable-next-line react-native/no-inline-styles */}
         <View style={{ position: 'absolute', width: 20 * s, height: 24 * s, backgroundColor: '#fff', borderRadius: (20 * s) / 2, top: 28 * s, left: 22 * s }} />
         {/* Right eye white */}
+          {/* eslint-disable-next-line react-native/no-inline-styles */}
         <View style={{ position: 'absolute', width: 20 * s, height: 24 * s, backgroundColor: '#fff', borderRadius: (20 * s) / 2, top: 28 * s, right: 22 * s }} />
         {/* Left pupil */}
+          {/* eslint-disable-next-line react-native/no-inline-styles */}
         <View style={{ position: 'absolute', width: 8 * s, height: 10 * s, backgroundColor: '#4A4F4B', borderRadius: (8 * s) / 2, top: 34 * s, left: 28 * s }} />
         {/* Right pupil */}
+          {/* eslint-disable-next-line react-native/no-inline-styles */}
         <View style={{ position: 'absolute', width: 8 * s, height: 10 * s, backgroundColor: '#4A4F4B', borderRadius: (8 * s) / 2, top: 34 * s, right: 28 * s }} />
         {/* Left cheek */}
+          {/* eslint-disable-next-line react-native/no-inline-styles */}
         <View style={{ position: 'absolute', width: 14 * s, height: 8 * s, backgroundColor: 'rgba(200,220,200,0.5)', borderRadius: (14 * s) / 2, top: 52 * s, left: 10 * s }} />
         {/* Right cheek */}
+          {/* eslint-disable-next-line react-native/no-inline-styles */}
         <View style={{ position: 'absolute', width: 14 * s, height: 8 * s, backgroundColor: 'rgba(200,220,200,0.5)', borderRadius: (14 * s) / 2, top: 52 * s, right: 10 * s }} />
         {/* Smile */}
+          {/* eslint-disable-next-line react-native/no-inline-styles */}
         <View style={{
           position: 'absolute', width: 24 * s, height: 12 * s, borderColor: '#4A4F4B', borderWidth: 3 * s,
           borderTopWidth: 0, borderBottomLeftRadius: 24 * s, borderBottomRightRadius: 24 * s, bottom: 20 * s, left: '50%', marginLeft: -12 * s
@@ -234,7 +267,17 @@ function LightbulbIcon({ color = colors.textMuted }: { color?: string }) {
   );
 }
 
-function TaskItem({ task, onToggle, onDelete }: { task: Task; onToggle: (id: number) => void; onDelete: (id: number) => void }) {
+function GoalsIcon({ color = colors.textMuted }: { color?: string }) {
+  return (
+    <Svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <Circle cx="12" cy="12" r="10" />
+      <Circle cx="12" cy="12" r="6" />
+      <Circle cx="12" cy="12" r="2" />
+    </Svg>
+  );
+}
+/* eslint-disable react-native/no-inline-styles */
+function TaskItem({ task, onToggle, onDelete, cardBg, text, textMuted }: { task: Task; onToggle: (id: number) => void; onDelete: (id: number) => void; cardBg: string; text: string; textMuted: string }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -243,12 +286,12 @@ function TaskItem({ task, onToggle, onDelete }: { task: Task; onToggle: (id: num
       Animated.timing(slideAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.timing(opacityAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [opacityAnim, slideAnim]);
 
   return (
     <Animated.View style={[
       styles.taskItem,
-      { opacity: task.completed ? 0.8 : opacityAnim, transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
+      { backgroundColor: cardBg, opacity: task.completed ? 0.8 : opacityAnim, transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }
     ]}>
       <TouchableOpacity onPress={() => onToggle(task.id)} style={[
         styles.checkbox,
@@ -258,7 +301,7 @@ function TaskItem({ task, onToggle, onDelete }: { task: Task; onToggle: (id: num
       </TouchableOpacity>
       <Text style={[
         styles.taskText,
-        { color: task.completed ? colors.textMuted : colors.textDark, textDecorationLine: task.completed ? 'line-through' : 'none' }
+        { color: task.completed ? textMuted : text, textDecorationLine: task.completed ? 'line-through' : 'none' }
       ]} numberOfLines={3}>
         {task.text}
       </Text>
@@ -282,7 +325,7 @@ function ConfettiPiece({ delay, x, color }: { delay: number; x: number; color: s
         Animated.timing(opacityAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
       ]).start();
     }, delay);
-  }, []);
+  }, [delay, fallAnim, opacityAnim, rotateAnim]);
 
   return (
     <Animated.View style={{
@@ -301,43 +344,73 @@ function ConfettiPiece({ delay, x, color }: { delay: number; x: number; color: s
   );
 }
 
-// Helper to get date string in YYYY-MM-DD format
+// Helper to get date string in YYYY-MM-DD format (local timezone)
 const formatDate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
-// Helper to format date for display
-const formatDisplayDate = (dateStr: string): string => {
+const formatLongDate = (dateStr: string): string => {
+  if (!dateStr) return 'Select a date';
   const date = new Date(dateStr + 'T00:00:00');
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (formatDate(date) === formatDate(today)) return 'Today';
-  if (formatDate(date) === formatDate(yesterday)) return 'Yesterday';
-
-  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  if (isNaN(date.getTime())) return 'Invalid date';
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  };
   return date.toLocaleDateString('en-US', options);
 };
 
 export default function Taskerino() {
   const insets = useSafeAreaInsets();
+
+  // Theme state
+  const [darkMode, setDarkMode] = useState(false);
+  const [themeColor, setThemeColor] = useState<'sage' | 'ocean' | 'lavender' | 'coral' | 'rose' | 'midnight'>('sage');
+
+  // Get current theme colors
+  const theme = themeColors[themeColor];
+  const bg = darkMode ? colors.bgDark : colors.bgCream;
+  const cardBg = darkMode ? colors.bgDarkCard : colors.white;
+  const text = darkMode ? colors.textLight : colors.textDark;
+  const textMuted = darkMode ? colors.textLightMuted : colors.textMuted;
+
+  // Other state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState('');
   const [greeting, setGreeting] = useState('');
   const [confetti, setConfetti] = useState<Array<{ id: number; x: number; color: string; delay: number }>>([]);
   const [celebration, setCelebration] = useState<{ emoji: string; text: string } | null>(null);
-  const [currentTab, setCurrentTab] = useState<'tasks' | 'calendar' | 'profile' | 'tips' | 'settings'>('tasks');
+  const [currentTab, setCurrentTab] = useState<'tasks' | 'goals' | 'calendar' | 'profile' | 'tips' | 'settings'>('tasks');
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
   const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [lastLoginDate, setLastLoginDate] = useState<string>('');
+  const [_lastLoginDate, setLastLoginDate] = useState<string>('');
   const [currentStreak, setCurrentStreak] = useState<number>(0);
-  const [selectedBadge, setSelectedBadge] = useState<typeof badges[0] | null>(null);
+  const [selectedBadge, setSelectedBadge] = useState<(typeof badges[0] & { unlocked: boolean; progress: number }) | null>(null);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [calendarViewMode, setCalendarViewMode] = useState<'month' | 'year'>('year');
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalInput, setGoalInput] = useState('');
+  const [showAchievements, setShowAchievements] = useState(true);
+  const [language, setLanguage] = useState<'en' | 'fr' | 'es'>('en');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [soundsEnabled, setSoundsEnabled] = useState(true);
+  const [tipsEnabled, setTipsEnabled] = useState(true);
+  const [goalsEnabled, setGoalsEnabled] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     loadTasks();
     loadStreakData();
+    loadGoals();
+    loadSettings();
     const hour = new Date().getHours();
     const time = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
     setGreeting(greetings[time][Math.floor(Math.random() * greetings[time].length)]);
@@ -357,10 +430,10 @@ export default function Taskerino() {
 
         if (diffDays === 0) {
           // Same day, keep streak
-          setCurrentStreak(parseInt(streak || '0'));
+          setCurrentStreak(parseInt(streak || '0', 10));
         } else if (diffDays === 1) {
           // Next day, increment streak
-          const newStreak = parseInt(streak || '0') + 1;
+          const newStreak = parseInt(streak || '0', 10) + 1;
           setCurrentStreak(newStreak);
           await AsyncStorage.setItem('taskerino-streak', newStreak.toString());
         } else {
@@ -381,10 +454,6 @@ export default function Taskerino() {
     }
   };
 
-  useEffect(() => {
-    saveTasks();
-  }, [tasks]);
-
   const loadTasks = async () => {
     try {
       const saved = await AsyncStorage.getItem('taskerino-tasks');
@@ -394,12 +463,95 @@ export default function Taskerino() {
     }
   };
 
-  const saveTasks = async () => {
+  const saveTasks = useCallback(async () => {
     try {
       await AsyncStorage.setItem('taskerino-tasks', JSON.stringify(tasks));
     } catch (error) {
       console.error('Failed to save tasks:', error);
     }
+  }, [tasks]);
+
+  useEffect(() => {
+    saveTasks();
+  }, [saveTasks, tasks]);
+
+  const loadGoals = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('taskerino-goals');
+      if (saved) setGoals(JSON.parse(saved));
+    } catch (error) {
+      console.error('Failed to load goals:', error);
+    }
+  };
+
+  const saveGoals = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem('taskerino-goals', JSON.stringify(goals));
+    } catch (error) {
+      console.error('Failed to save goals:', error);
+    }
+  }, [goals]);
+
+  useEffect(() => {
+    saveGoals();
+  }, [goals, saveGoals]);
+
+  const loadSettings = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('taskerino-settings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        setDarkMode(settings.darkMode ?? false);
+        setThemeColor(settings.themeColor ?? 'sage');
+        setLanguage(settings.language ?? 'en');
+        setNotificationsEnabled(settings.notificationsEnabled ?? false);
+        setTipsEnabled(settings.tipsEnabled ?? true);
+        setGoalsEnabled(settings.goalsEnabled ?? false);
+        setSoundsEnabled(settings.soundsEnabled ?? true);
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  };
+
+  const saveSettings = async (newSettings: { darkMode?: boolean; themeColor?: string; language?: string; notificationsEnabled?: boolean; tipsEnabled?: boolean; goalsEnabled?: boolean; soundsEnabled?: boolean }) => {
+    try {
+      const saved = await AsyncStorage.getItem('taskerino-settings');
+      const current = saved ? JSON.parse(saved) : {};
+      const updated = { ...current, ...newSettings };
+      await AsyncStorage.setItem('taskerino-settings', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
+  };
+
+  const addGoal = () => {
+    if (!goalInput.trim()) return;
+    setGoals([{ id: Date.now(), text: goalInput.trim(), completed: false }, ...goals]);
+    setGoalInput('');
+  };
+
+  const toggleGoal = (id: number) => {
+    setGoals(goals.map(g => {
+      if (g.id === id) {
+        if (!g.completed) {
+          setConfetti(Array.from({ length: 30 }, (_, i) => ({
+            id: i,
+            x: Math.random() * 100,
+            color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+            delay: i * 30
+          })));
+          setCelebration(celebrations[Math.floor(Math.random() * celebrations.length)]);
+          setTimeout(() => { setConfetti([]); setCelebration(null); }, 2000);
+        }
+        return { ...g, completed: !g.completed };
+      }
+      return g;
+    }));
+  };
+
+  const deleteGoal = (id: number) => {
+    setGoals(goals.filter(g => g.id !== id));
   };
 
   const addTask = () => {
@@ -434,26 +586,91 @@ export default function Taskerino() {
   const todo = tasksForDate.filter(t => !t.completed);
   const done = tasksForDate.filter(t => t.completed);
 
-  // Generate calendar dates (last 30 days + next 30 days)
+  // Generate calendar dates based on view mode
   const generateCalendarDates = () => {
-    const dates: Array<{ date: string; taskCount: number; hasUnfinished: boolean }> = [];
-    const today = new Date();
+    if (calendarViewMode === 'year') {
+      // Year view: Show all 12 months of the selected year in a grid
+      const months: Array<{ month: number; label: string; taskCount: number; hasUnfinished: boolean }> = [];
 
-    for (let i = -30; i <= 30; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() + i);
-      const dateStr = formatDate(date);
-      const dateTasks = tasks.filter(t => t.date === dateStr);
-      const unfinished = dateTasks.some(t => !t.completed);
+      for (let month = 0; month < 12; month++) {
+        let monthTaskCount = 0;
+        let monthHasUnfinished = false;
 
-      dates.push({
-        date: dateStr,
-        taskCount: dateTasks.length,
-        hasUnfinished: unfinished
-      });
+        const daysInMonth = new Date(selectedYear, month + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayDate = new Date(selectedYear, month, day);
+          const dayStr = formatDate(dayDate);
+          const dayTasks = tasks.filter(t => t.date === dayStr);
+          monthTaskCount += dayTasks.length;
+          if (dayTasks.some(t => !t.completed)) monthHasUnfinished = true;
+        }
+
+        const monthName = new Date(selectedYear, month, 1).toLocaleDateString('en-US', { month: 'long' });
+        months.push({ month, label: monthName, taskCount: monthTaskCount, hasUnfinished: monthHasUnfinished });
+      }
+
+      return months;
+    } else if (calendarViewMode === 'month') {
+      // Month view: Show calendar grid for the selected month (Monday-Sunday)
+      const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+      const firstDay = new Date(selectedYear, selectedMonth, 1).getDay(); // 0 = Sunday
+      const firstDayMonday = firstDay === 0 ? 6 : firstDay - 1; // Convert to Monday = 0
+      const days: Array<{ date: string; day: number; label: string; taskCount: number; hasUnfinished: boolean; isCurrentMonth: boolean }> = [];
+
+      // Add padding days from previous month
+      const prevMonthDays = new Date(selectedYear, selectedMonth, 0).getDate();
+      for (let i = firstDayMonday - 1; i >= 0; i--) {
+        const day = prevMonthDays - i;
+        const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
+        const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+        const dayDate = new Date(prevYear, prevMonth, day);
+        const dayStr = formatDate(dayDate);
+        const dayTasks = tasks.filter(t => t.date === dayStr);
+        days.push({
+          date: dayStr,
+          day,
+          label: day.toString(),
+          taskCount: dayTasks.length,
+          hasUnfinished: dayTasks.some(t => !t.completed),
+          isCurrentMonth: false
+        });
+      }
+
+      // Add current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(selectedYear, selectedMonth, day);
+        const dayStr = formatDate(dayDate);
+        const dayTasks = tasks.filter(t => t.date === dayStr);
+        days.push({
+          date: dayStr,
+          day,
+          label: day.toString(),
+          taskCount: dayTasks.length,
+          hasUnfinished: dayTasks.some(t => !t.completed),
+          isCurrentMonth: true
+        });
+      }
+
+      // Add padding days from next month
+      const remainingDays = 42 - days.length; // 6 rows x 7 days
+      for (let day = 1; day <= remainingDays; day++) {
+        const nextMonth = selectedMonth === 11 ? 0 : selectedMonth + 1;
+        const nextYear = selectedMonth === 11 ? selectedYear + 1 : selectedYear;
+        const dayDate = new Date(nextYear, nextMonth, day);
+        const dayStr = formatDate(dayDate);
+        const dayTasks = tasks.filter(t => t.date === dayStr);
+        days.push({
+          date: dayStr,
+          day,
+          label: day.toString(),
+          taskCount: dayTasks.length,
+          hasUnfinished: dayTasks.some(t => !t.completed),
+          isCurrentMonth: false
+        });
+      }
+
+      return days;
     }
-
-    return dates;
   };
 
   const celebScaleAnim = useRef(new Animated.Value(0)).current;
@@ -463,7 +680,7 @@ export default function Taskerino() {
       celebScaleAnim.setValue(0);
       Animated.spring(celebScaleAnim, { toValue: 1, friction: 8, useNativeDriver: true }).start();
     }
-  }, [celebration]);
+  }, [celebScaleAnim, celebration]);
 
   // Calculate badge progress
   const getUnlockedBadges = () => {
@@ -504,40 +721,49 @@ export default function Taskerino() {
       const earnedCount = unlockedBadges.filter(b => b.unlocked).length;
 
       return (
-        <View style={{ paddingTop: insets.top + 20 }}>
-          <View style={styles.profileHeader}>
-            <View style={styles.profileAvatarContainer}>
-              <Mascot size={100} />
+        <>
+          <View style={[styles.header, { paddingTop: insets.top }]}>
+            <View style={styles.mascotContainer}>
+              <Mascot size={90} />
             </View>
-            <Text style={styles.profileName}>Task Master</Text>
-            <Text style={styles.profileSubtitle}>You're doing amazing! 💚</Text>
+            <Text style={[styles.title, { color: text }]}>Profile</Text>
+            <Text style={[styles.greeting, { color: textMuted }]}>You're doing amazing! 💚</Text>
+          </View>
 
-            <View style={styles.profileStats}>
-              <View style={styles.profileStatItem}>
-                <Text style={styles.profileStatNumber}>{tasks.length}</Text>
-                <Text style={styles.profileStatLabel}>Tasks Created</Text>
-              </View>
-              <View style={styles.profileStatItem}>
-                <Text style={[styles.profileStatNumber, { color: colors.mint }]}>🔥 {currentStreak}</Text>
-                <Text style={styles.profileStatLabel}>Day Streak</Text>
-              </View>
-              <View style={styles.profileStatItem}>
-                <Text style={[styles.profileStatNumber, { color: colors.lavender }]}>{earnedCount}</Text>
-                <Text style={styles.profileStatLabel}>Badges Earned</Text>
-              </View>
+          <View style={styles.profileStats}>
+            <View style={[styles.profileStatItem, { backgroundColor: cardBg }]}>
+              <Text style={[styles.profileStatNumber, { color: theme.primary }]}>{tasks.length}</Text>
+              <Text style={[styles.profileStatLabel, { color: textMuted }]}>Tasks Created</Text>
+            </View>
+            <View style={[styles.profileStatItem, { backgroundColor: cardBg }]}>
+              <Text style={[styles.profileStatNumber, { color: theme.primary }]}>🔥 {currentStreak}</Text>
+              <Text style={[styles.profileStatLabel, { color: textMuted }]}>Day Streak</Text>
+            </View>
+            <View style={[styles.profileStatItem, { backgroundColor: cardBg }]}>
+              <Text style={[styles.profileStatNumber, { color: theme.primary }]}>{earnedCount}</Text>
+              <Text style={[styles.profileStatLabel, { color: textMuted }]}>Badges Earned</Text>
             </View>
           </View>
 
-          <ScrollView style={styles.badgesList} contentContainerStyle={{ paddingBottom: 20 }}>
-            <Text style={styles.badgesSectionTitle}>🏆 Achievements</Text>
+          <ScrollView style={styles.badgesList} contentContainerStyle={{ paddingBottom: 100 }}>
+            {/* Achievements Section with Toggle */}
+            <TouchableOpacity
+              onPress={() => setShowAchievements(!showAchievements)}
+              style={styles.achievementsToggle}
+            >
+              <Text style={[styles.badgesSectionTitle, { color: text }]}>🏆 Achievements</Text>
+              <Text style={[styles.achievementsToggleIcon, { color: textMuted }]}>{showAchievements ? '−' : '+'}</Text>
+            </TouchableOpacity>
 
+            {showAchievements && (
+              <>
             {/* Tasks Category */}
-            <Text style={styles.badgeCategoryTitle}>🌱 Creation Journey</Text>
+            <Text style={[styles.badgeCategoryTitle, { color: textMuted }]}>🌱 Creation Journey</Text>
             <View style={styles.badgesRow}>
               {unlockedBadges.filter(b => b.type === 'tasks').map((badge) => (
                 <TouchableOpacity
                   key={badge.id}
-                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  style={[styles.badgeMini, { backgroundColor: cardBg }, !badge.unlocked && styles.badgeMiniLocked]}
                   onPress={() => {
                     setSelectedBadge(badge);
                     setShowBadgeModal(true);
@@ -545,21 +771,21 @@ export default function Taskerino() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
-                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  <Text style={[styles.badgeMiniTitle, { color: text }]}>{badge.title}</Text>
                   {!badge.unlocked && (
-                    <Text style={styles.badgeMiniProgress}>{badge.progress}/{badge.requirement}</Text>
+                    <Text style={[styles.badgeMiniProgress, { color: textMuted }]}>{badge.progress}/{badge.requirement}</Text>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Streak Category */}
-            <Text style={styles.badgeCategoryTitle}>🔥 Streak Power</Text>
+            <Text style={[styles.badgeCategoryTitle, { color: textMuted }]}>🔥 Streak Power</Text>
             <View style={styles.badgesRow}>
               {unlockedBadges.filter(b => b.type === 'streak').map((badge) => (
                 <TouchableOpacity
                   key={badge.id}
-                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  style={[styles.badgeMini, { backgroundColor: cardBg }, !badge.unlocked && styles.badgeMiniLocked]}
                   onPress={() => {
                     setSelectedBadge(badge);
                     setShowBadgeModal(true);
@@ -567,21 +793,21 @@ export default function Taskerino() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
-                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  <Text style={[styles.badgeMiniTitle, { color: text }]}>{badge.title}</Text>
                   {!badge.unlocked && (
-                    <Text style={styles.badgeMiniProgress}>{badge.progress}/{badge.requirement}</Text>
+                    <Text style={[styles.badgeMiniProgress, { color: textMuted }]}>{badge.progress}/{badge.requirement}</Text>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Completion Category */}
-            <Text style={styles.badgeCategoryTitle}>✨ Completion Master</Text>
+            <Text style={[styles.badgeCategoryTitle, { color: textMuted }]}>✨ Completion Master</Text>
             <View style={styles.badgesRow}>
               {unlockedBadges.filter(b => b.type === 'completed').map((badge) => (
                 <TouchableOpacity
                   key={badge.id}
-                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  style={[styles.badgeMini, { backgroundColor: cardBg }, !badge.unlocked && styles.badgeMiniLocked]}
                   onPress={() => {
                     setSelectedBadge(badge);
                     setShowBadgeModal(true);
@@ -589,21 +815,21 @@ export default function Taskerino() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
-                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  <Text style={[styles.badgeMiniTitle, { color: text }]}>{badge.title}</Text>
                   {!badge.unlocked && (
-                    <Text style={styles.badgeMiniProgress}>{badge.progress}/{badge.requirement}</Text>
+                    <Text style={[styles.badgeMiniProgress, { color: textMuted }]}>{badge.progress}/{badge.requirement}</Text>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Special Category */}
-            <Text style={styles.badgeCategoryTitle}>🎯 Special Achievements</Text>
+            <Text style={[styles.badgeCategoryTitle, { color: textMuted }]}>🎯 Special Achievements</Text>
             <View style={styles.badgesRow}>
               {unlockedBadges.filter(b => b.type === 'perfect_day' || b.type === 'productive_day' || b.type === 'completion_streak').map((badge) => (
                 <TouchableOpacity
                   key={badge.id}
-                  style={[styles.badgeMini, !badge.unlocked && styles.badgeMiniLocked]}
+                  style={[styles.badgeMini, { backgroundColor: cardBg }, !badge.unlocked && styles.badgeMiniLocked]}
                   onPress={() => {
                     setSelectedBadge(badge);
                     setShowBadgeModal(true);
@@ -611,38 +837,202 @@ export default function Taskerino() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
-                  <Text style={styles.badgeMiniTitle}>{badge.title}</Text>
+                  <Text style={[styles.badgeMiniTitle, { color: text }]}>{badge.title}</Text>
                   {!badge.unlocked && (
-                    <Text style={styles.badgeMiniProgress}>Locked</Text>
+                    <Text style={[styles.badgeMiniProgress, { color: textMuted }]}>Locked</Text>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
+            </>
+          )}
           </ScrollView>
-        </View>
+        </>
+      );
+    }
+
+    if (currentTab === 'goals') {
+      const todoGoals = goals.filter(g => !g.completed);
+      const doneGoals = goals.filter(g => g.completed);
+
+      return (
+        <>
+          {/* Header */}
+          <View style={[styles.header, { paddingTop: insets.top }]}>
+            <View style={styles.mascotContainer}>
+              <Mascot size={90} />
+            </View>
+            <Text style={[styles.title, { color: text }]}>Goals</Text>
+            <Text style={[styles.greeting, { color: textMuted }]}>Dream big, achieve bigger! 🎯</Text>
+            <View style={styles.dateNavigator}>
+              <TouchableOpacity
+                onPress={() => {
+                  const prevDate = new Date(selectedDate);
+                  prevDate.setDate(prevDate.getDate() - 1);
+                  setSelectedDate(prevDate.toISOString().split('T')[0]);
+                }}
+                style={[styles.dateArrow, { backgroundColor: cardBg }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.dateArrowText, { color: theme.primary }]}>←</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowCalendarModal(true)} style={[styles.dateSelectorWide, { backgroundColor: selectedDate === formatDate(new Date()) ? colors.sage : cardBg }]}>
+                <Text style={[styles.dateSelectorText, { color: selectedDate === formatDate(new Date()) ? '#fff' : theme.primary }]}>{formatLongDate(selectedDate)}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  const nextDate = new Date(selectedDate);
+                  nextDate.setDate(nextDate.getDate() + 1);
+                  setSelectedDate(nextDate.toISOString().split('T')[0]);
+                }}
+                style={[styles.dateArrow, { backgroundColor: cardBg }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.dateArrowText, { color: theme.primary }]}>→</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Stats */}
+          <View style={styles.statsContainer}>
+            <View style={[styles.statBox, { backgroundColor: cardBg, borderTopColor: theme.primary }]}>
+              <Text style={[styles.statNumber, { color: theme.primary }]}>{todoGoals.length}</Text>
+              <Text style={[styles.statLabel, { color: textMuted }]}>PLANNED</Text>
+            </View>
+            <View style={[styles.statBox, { backgroundColor: cardBg, borderTopColor: theme.primary }]}>
+              <Text style={[styles.statNumber, { color: theme.primary }]}>{doneGoals.length}</Text>
+              <Text style={[styles.statLabel, { color: textMuted }]}>ACHIEVED</Text>
+            </View>
+          </View>
+
+          {/* Input */}
+          <View style={[styles.inputContainer, { backgroundColor: cardBg }]}>
+            <TextInput
+              style={[styles.input, { color: text }]}
+              value={goalInput}
+              onChangeText={setGoalInput}
+              placeholder="Add a new goal..."
+              placeholderTextColor={textMuted}
+              onSubmitEditing={addGoal}
+            />
+            <TouchableOpacity onPress={addGoal} style={styles.addButton}>
+              <PlusIcon />
+            </TouchableOpacity>
+          </View>
+
+          {/* Goal List */}
+          {/* All Goals Achieved Banner */}
+          {goals.length > 0 && todoGoals.length === 0 && (
+            <View style={[styles.allDoneBanner, { backgroundColor: darkMode ? '#1a3a2e' : colors.sage }]}>
+              <Text style={styles.allDoneEmoji}>🎉</Text>
+              <Text style={[styles.allDoneTitle, { color: darkMode ? '#4a9d7f' : '#fff' }]}>All goals achieved!</Text>
+              <Text style={[styles.allDoneSubtitle, { color: darkMode ? '#6ab896' : 'rgba(255,255,255,0.9)' }]}>Keep growing, set new goals!</Text>
+            </View>
+          )}
+
+          {/* Empty State */}
+          {goals.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyTitle, { color: text }]}>Ready when you are!</Text>
+              <Text style={[styles.emptySubtitle, { color: textMuted }]}>Add your first goal above 👆</Text>
+            </View>
+          )}
+
+          {/* Active Goals */}
+          {todoGoals.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionIcon}>🎯</Text>
+                <Text style={[styles.sectionTitle, { color: text }]}>My Goals</Text>
+              </View>
+              {todoGoals.map((goal) => (
+                <TaskItem
+                  key={goal.id}
+                  task={{ id: goal.id, text: goal.text, completed: goal.completed, date: '' }}
+                  onToggle={toggleGoal}
+                  onDelete={deleteGoal}
+                  cardBg={cardBg}
+                  text={text}
+                  textMuted={textMuted}
+                />
+              ))}
+            </View>
+          )}
+
+          {doneGoals.length > 0 && (
+            <View style={[styles.section, styles.doneSection]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionIcon}>✨</Text>
+                <Text style={[styles.sectionTitle, { color: colors.mintDark }]}>Conquered!</Text>
+              </View>
+              {doneGoals.map((goal) => (
+                <TaskItem
+                  key={goal.id}
+                  task={{ id: goal.id, text: goal.text, completed: goal.completed, date: '' }}
+                  onToggle={toggleGoal}
+                  onDelete={deleteGoal}
+                  cardBg={cardBg}
+                  text={text}
+                  textMuted={textMuted}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Clear All Goals Button */}
+          {goals.length > 0 && (
+            <View style={styles.clearAllButtonContainer}>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    'Clear All Goals',
+                    'Are you sure you want to delete all goals? This action cannot be undone.',
+                    [
+                      {
+                        text: 'Cancel',
+                        style: 'cancel'
+                      },
+                      {
+                        text: 'Clear All',
+                        style: 'destructive',
+                        onPress: () => setGoals([])
+                      }
+                    ]
+                  );
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.clearAllButtonText, { color: textMuted }]}>Clear All Goals</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
       );
     }
 
     if (currentTab === 'tips') {
       return (
-        <View style={{ paddingTop: insets.top + 20 }}>
-          <View style={styles.tipsHeader}>
-            <Mascot size={70} />
-            <Text style={styles.tipsTitle}>Friendly Tips</Text>
-            <Text style={styles.tipsSubtitle}>No pressure, just gentle guidance 💚</Text>
+        <>
+          <View style={[styles.header, { paddingTop: insets.top }]}>
+            <View style={styles.mascotContainer}>
+              <Mascot size={90} />
+            </View>
+            <Text style={[styles.title, { color: text }]}>Tips</Text>
+            <Text style={[styles.greeting, { color: textMuted }]}>No pressure, just gentle guidance 💚</Text>
           </View>
-          <ScrollView style={styles.tipsList} contentContainerStyle={{ paddingBottom: 20 }}>
+
+          <ScrollView style={styles.tipsList} contentContainerStyle={{ paddingBottom: 100 }}>
             {tips.map((tip) => (
-              <View key={tip.id} style={styles.tipCard}>
+              <View key={tip.id} style={[styles.tipCard, { backgroundColor: cardBg }]}>
                 <Text style={styles.tipEmoji}>{tip.emoji}</Text>
                 <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>{tip.title}</Text>
-                  <Text style={styles.tipDescription}>{tip.description}</Text>
+                  <Text style={[styles.tipTitle, { color: text }]}>{tip.title}</Text>
+                  <Text style={[styles.tipDescription, { color: textMuted }]}>{tip.description}</Text>
                 </View>
               </View>
             ))}
           </ScrollView>
-        </View>
+        </>
       );
     }
 
@@ -650,77 +1040,186 @@ export default function Taskerino() {
       return (
         <ScrollView style={{ paddingTop: insets.top + 20 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
           <View style={styles.settingsHeader}>
-            <Text style={styles.settingsTitle}>Settings</Text>
-            <Text style={styles.settingsSubtitle}>Customize your experience</Text>
+            <Text style={[styles.settingsTitle, { color: text }]}>Settings</Text>
+            <Text style={[styles.settingsSubtitle, { color: textMuted }]}>Customize your experience</Text>
           </View>
 
-          {/* Pro Section */}
+          {/* General Settings */}
           <View style={styles.settingsSection}>
-            <Text style={styles.settingsSectionTitle}>⭐ Taskerino Pro</Text>
-            <View style={styles.proCard}>
+            <Text style={[styles.settingsSectionTitle, { color: text }]}>General</Text>
+
+            {/* Dark Mode */}
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <View style={styles.settingsToggleRow}>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: text }]}>Dark Mode</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Switch to dark theme</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setDarkMode(!darkMode);
+                    saveSettings({ darkMode: !darkMode });
+                  }}
+                  style={[styles.toggle, { backgroundColor: darkMode ? theme.primary : textMuted }, darkMode && styles.toggleActive]}
+                >
+                  <View style={[styles.toggleThumb, darkMode && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Notifications */}
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <View style={styles.settingsToggleRow}>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: text }]}>Daily Notifications</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Get a gentle daily reminder</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setNotificationsEnabled(!notificationsEnabled);
+                    saveSettings({ notificationsEnabled: !notificationsEnabled });
+                  }}
+                  style={[styles.toggle, { backgroundColor: notificationsEnabled ? theme.primary : textMuted }, notificationsEnabled && styles.toggleActive]}
+                >
+                  <View style={[styles.toggleThumb, notificationsEnabled && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Tips */}
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <View style={styles.settingsToggleRow}>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: text }]}>Tips</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Show helpful tips and guidance</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setTipsEnabled(!tipsEnabled);
+                    saveSettings({ tipsEnabled: !tipsEnabled });
+                  }}
+                  style={[styles.toggle, { backgroundColor: tipsEnabled ? theme.primary : textMuted }, tipsEnabled && styles.toggleActive]}
+                >
+                  <View style={[styles.toggleThumb, tipsEnabled && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Sounds */}
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <View style={styles.settingsToggleRow}>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: text }]}>Sounds</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Play sound effects</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSoundsEnabled(!soundsEnabled);
+                    saveSettings({ soundsEnabled: !soundsEnabled });
+                  }}
+                  style={[styles.toggle, { backgroundColor: soundsEnabled ? theme.primary : textMuted }, soundsEnabled && styles.toggleActive]}
+                >
+                  <View style={[styles.toggleThumb, soundsEnabled && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Language */}
+            <TouchableOpacity
+              style={[styles.settingsCard, { backgroundColor: cardBg }]}
+              onPress={() => setShowLanguageModal(true)}
+            >
+              <View style={styles.settingsToggleRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingsLabel, { color: text }]}>Language</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>
+                    {language === 'en' ? 'English' : language === 'fr' ? 'Français' : 'Español'}
+                  </Text>
+                </View>
+                <Text style={[styles.settingsArrow, { color: textMuted }]}>›</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Pro Features */}
+          <View style={styles.settingsSection}>
+            <Text style={[styles.settingsSectionTitle, { color: text }]}>Pro Features</Text>
+
+            {/* Goals Toggle */}
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <View style={styles.settingsToggleRow}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={[styles.settingsLabel, { color: text }]}>Goals</Text>
+                    <View style={styles.proBadgeSmall}>
+                      <Text style={styles.proBadgeSmallText}>PRO</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Enable long-term goals tracking</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    // TODO: Check if user has Pro, otherwise show upgrade modal
+                    setGoalsEnabled(!goalsEnabled);
+                    saveSettings({ goalsEnabled: !goalsEnabled });
+                  }}
+                  style={[styles.toggle, { backgroundColor: goalsEnabled ? theme.primary : textMuted }, goalsEnabled && styles.toggleActive]}
+                >
+                  <View style={[styles.toggleThumb, goalsEnabled && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+
+            {/* Pro Upgrade Card */}
+            <View style={[styles.proCard, { backgroundColor: cardBg }]}>
               <View style={styles.proHeader}>
-                <Text style={styles.proTitle}>Upgrade to Pro</Text>
+                <Text style={[styles.proTitle, { color: text }]}>Upgrade to Pro</Text>
                 <View style={styles.proBadge}>
                   <Text style={styles.proBadgeText}>✨ Premium</Text>
                 </View>
               </View>
-              <Text style={styles.proDescription}>Unlock powerful features and support development!</Text>
+              <Text style={[styles.proDescription, { color: textMuted }]}>Unlock powerful features and support development!</Text>
 
               <View style={styles.proFeatures}>
                 <View style={styles.proFeature}>
-                  <Text style={styles.proFeatureIcon}>🎨</Text>
-                  <Text style={styles.proFeatureText}>Custom themes & colors</Text>
-                </View>
-                <View style={styles.proFeature}>
-                  <Text style={styles.proFeatureIcon}>☁️</Text>
-                  <Text style={styles.proFeatureText}>Cloud sync across devices</Text>
-                </View>
-                <View style={styles.proFeature}>
-                  <Text style={styles.proFeatureIcon}>📊</Text>
-                  <Text style={styles.proFeatureText}>Advanced statistics</Text>
-                </View>
-                <View style={styles.proFeature}>
-                  <Text style={styles.proFeatureIcon}>🔔</Text>
-                  <Text style={styles.proFeatureText}>Smart reminders</Text>
-                </View>
-                <View style={styles.proFeature}>
-                  <Text style={styles.proFeatureIcon}>🏅</Text>
-                  <Text style={styles.proFeatureText}>Exclusive badges</Text>
+                  <Text style={styles.proFeatureIcon}>🎯</Text>
+                  <Text style={[styles.proFeatureText, { color: text }]}>Goals tracking</Text>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.proButton} activeOpacity={0.8}>
+              <TouchableOpacity style={[styles.proButton, { backgroundColor: theme.primary }]} activeOpacity={0.8}>
                 <Text style={styles.proButtonText}>Get Pro - $4.99/month</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.restoreButton}>
-                <Text style={styles.restoreButtonText}>Restore Purchase</Text>
+                <Text style={[styles.restoreButtonText, { color: textMuted }]}>Restore Purchase</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* App Info */}
           <View style={styles.settingsSection}>
-            <Text style={styles.settingsSectionTitle}>ℹ️ App Info</Text>
-            <View style={styles.settingsCard}>
+            <Text style={[styles.settingsSectionTitle, { color: text }]}>App Info</Text>
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
               <View style={styles.settingsRow}>
-                <Text style={styles.settingsLabel}>Version</Text>
-                <Text style={styles.settingsValue}>1.0.0</Text>
+                <Text style={[styles.settingsLabel, { color: text }]}>Version</Text>
+                <Text style={[styles.settingsValue, { color: textMuted }]}>1.0.0</Text>
               </View>
               <View style={styles.settingsRow}>
-                <Text style={styles.settingsLabel}>Made with</Text>
-                <Text style={styles.settingsValue}>💚 & React Native</Text>
+                <Text style={[styles.settingsLabel, { color: text }]}>Made with</Text>
+                <Text style={[styles.settingsValue, { color: textMuted }]}>💚 & React Native</Text>
               </View>
             </View>
           </View>
 
           {/* Support */}
           <View style={styles.settingsSection}>
-            <Text style={styles.settingsSectionTitle}>💬 Support</Text>
-            <TouchableOpacity style={styles.settingsCard}>
-              <Text style={styles.settingsLink}>Send Feedback</Text>
+            <Text style={[styles.settingsSectionTitle, { color: text }]}>Support</Text>
+            <TouchableOpacity style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <Text style={[styles.settingsLink, { color: theme.primary }]}>Send Feedback</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.settingsCard}>
-              <Text style={styles.settingsLink}>Rate on App Store</Text>
+            <TouchableOpacity style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <Text style={[styles.settingsLink, { color: theme.primary }]}>Rate on App Store</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -735,36 +1234,59 @@ export default function Taskerino() {
           <View style={styles.mascotContainer}>
             <Mascot size={90} />
           </View>
-          <Text style={styles.title}>Taskerino</Text>
-          <Text style={styles.greeting}>{greeting}</Text>
-          <TouchableOpacity onPress={() => setShowCalendarModal(true)} style={styles.dateSelector}>
-            <CalendarIcon color={colors.sage} />
-            <Text style={styles.dateSelectorText}>{formatDisplayDate(selectedDate)}</Text>
-          </TouchableOpacity>
+          <Text style={[styles.title, { color: text }]}>Taskerino</Text>
+          <Text style={[styles.greeting, { color: textMuted }]}>{greeting}</Text>
+          <View style={styles.dateNavigator}>
+            <TouchableOpacity
+              onPress={() => {
+                const prevDate = new Date(selectedDate);
+                prevDate.setDate(prevDate.getDate() - 1);
+                setSelectedDate(prevDate.toISOString().split('T')[0]);
+              }}
+              style={[styles.dateArrow, { backgroundColor: cardBg }]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dateArrowText, { color: theme.primary }]}>←</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowCalendarModal(true)} style={[styles.dateSelectorWide, { backgroundColor: selectedDate === formatDate(new Date()) ? colors.sage : cardBg }]}>
+              <Text style={[styles.dateSelectorText, { color: selectedDate === formatDate(new Date()) ? '#fff' : theme.primary }]}>{formatLongDate(selectedDate)}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                const nextDate = new Date(selectedDate);
+                nextDate.setDate(nextDate.getDate() + 1);
+                setSelectedDate(nextDate.toISOString().split('T')[0]);
+              }}
+              style={[styles.dateArrow, { backgroundColor: cardBg }]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dateArrowText, { color: theme.primary }]}>→</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats */}
         <View style={styles.statsContainer}>
-          <View style={[styles.statBox, { borderTopColor: colors.sage }]}>
-            <Text style={[styles.statNumber, { color: colors.sage }]}>{todo.length}</Text>
-            <Text style={styles.statLabel}>TO DO</Text>
+          <View style={[styles.statBox, { backgroundColor: cardBg, borderTopColor: theme.primary }]}>
+            <Text style={[styles.statNumber, { color: theme.primary }]}>{todo.length}</Text>
+            <Text style={[styles.statLabel, { color: textMuted }]}>TO DO</Text>
           </View>
-          <View style={[styles.statBox, { borderTopColor: colors.mint }]}>
-            <Text style={[styles.statNumber, { color: colors.mint }]}>{done.length}</Text>
-            <Text style={styles.statLabel}>DONE</Text>
+          <View style={[styles.statBox, { backgroundColor: cardBg, borderTopColor: theme.primary }]}>
+            <Text style={[styles.statNumber, { color: theme.primary }]}>{done.length}</Text>
+            <Text style={[styles.statLabel, { color: textMuted }]}>DONE</Text>
           </View>
         </View>
 
         {/* Input */}
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { backgroundColor: cardBg }]}>
           <TextInput
             value={input}
             onChangeText={setInput}
             onSubmitEditing={addTask}
             placeholder="What's on your mind?"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={textMuted}
             maxLength={200}
-            style={styles.input}
+            style={[styles.input, { color: text }]}
           />
           <TouchableOpacity onPress={addTask} style={styles.addButton} activeOpacity={0.7}>
             <PlusIcon />
@@ -773,24 +1295,18 @@ export default function Taskerino() {
 
         {/* All Done Banner */}
         {tasksForDate.length > 0 && todo.length === 0 && (
-          <View style={styles.allDoneBanner}>
+          <View style={[styles.allDoneBanner, { backgroundColor: darkMode ? '#1a3a2e' : colors.sage }]}>
             <Text style={styles.allDoneEmoji}>🎉</Text>
-            <Text style={styles.allDoneTitle}>You did it!</Text>
-            <Text style={styles.allDoneSubtitle}>All tasks complete. You're amazing!</Text>
+            <Text style={[styles.allDoneTitle, { color: darkMode ? '#4a9d7f' : '#fff' }]}>You did it!</Text>
+            <Text style={[styles.allDoneSubtitle, { color: darkMode ? '#6ab896' : 'rgba(255,255,255,0.9)' }]}>All tasks complete. You're amazing!</Text>
           </View>
         )}
 
         {/* Empty State */}
         {tasksForDate.length === 0 && (
           <View style={styles.emptyState}>
-            <View style={styles.emptyMascotContainer}>
-              <Text style={[styles.emptyDecor, { top: 0, left: 10 }]}>✨</Text>
-              <Text style={[styles.emptyDecor, { top: 20, right: 5 }]}>⭐</Text>
-              <Text style={[styles.emptyDecor, { bottom: 10, left: 20 }]}>💫</Text>
-              <Mascot size={80} />
-            </View>
-            <Text style={styles.emptyTitle}>Ready when you are!</Text>
-            <Text style={styles.emptySubtitle}>Add your first task above 👆</Text>
+            <Text style={[styles.emptyTitle, { color: text }]}>Ready when you are!</Text>
+            <Text style={[styles.emptySubtitle, { color: textMuted }]}>Add your first task above 👆</Text>
           </View>
         )}
 
@@ -799,9 +1315,9 @@ export default function Taskerino() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>📋</Text>
-              <Text style={styles.sectionTitle}>Let's do this!</Text>
+              <Text style={[styles.sectionTitle, { color: text }]}>Let's do this!</Text>
             </View>
-            {todo.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} />)}
+            {todo.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} cardBg={cardBg} text={text} textMuted={textMuted} />)}
           </View>
         )}
 
@@ -811,7 +1327,35 @@ export default function Taskerino() {
               <Text style={styles.sectionIcon}>✨</Text>
               <Text style={[styles.sectionTitle, { color: colors.mintDark }]}>Conquered!</Text>
             </View>
-            {done.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} />)}
+            {done.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} cardBg={cardBg} text={text} textMuted={textMuted} />)}
+          </View>
+        )}
+
+        {/* Clear All Tasks Button */}
+        {tasksForDate.length > 0 && (
+          <View style={styles.clearAllButtonContainer}>
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(
+                  'Clear All Tasks',
+                  'Are you sure you want to delete all tasks for this date? This action cannot be undone.',
+                  [
+                    {
+                      text: 'Cancel',
+                      style: 'cancel'
+                    },
+                    {
+                      text: 'Clear All',
+                      style: 'destructive',
+                      onPress: () => setTasks(tasks.filter(t => t.date !== selectedDate))
+                    }
+                  ]
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.clearAllButtonText, { color: textMuted }]}>Clear All Tasks</Text>
+            </TouchableOpacity>
           </View>
         )}
       </>
@@ -819,7 +1363,7 @@ export default function Taskerino() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       {/* Confetti */}
       <View style={styles.confettiContainer} pointerEvents="none">
         {confetti.map(c => <ConfettiPiece key={c.id} delay={c.delay} x={c.x} color={c.color} />)}
@@ -828,9 +1372,9 @@ export default function Taskerino() {
       {/* Celebration Modal */}
       {celebration && (
         <View style={styles.celebrationOverlay} pointerEvents="none">
-          <Animated.View style={[styles.celebrationBox, { transform: [{ scale: celebScaleAnim }] }]}>
+          <Animated.View style={[styles.celebrationBox, { backgroundColor: cardBg, transform: [{ scale: celebScaleAnim }] }]}>
             <Text style={styles.celebrationEmoji}>{celebration.emoji}</Text>
-            <Text style={styles.celebrationText}>{celebration.text}</Text>
+            <Text style={[styles.celebrationText, { color: theme.primary }]}>{celebration.text}</Text>
           </Animated.View>
         </View>
       )}
@@ -887,48 +1431,270 @@ export default function Taskerino() {
         </View>
       </Modal>
 
+      {/* Language Selector Modal */}
+      <Modal visible={showLanguageModal} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setShowLanguageModal(false)}
+            style={styles.modalOverlay}
+          >
+            <View style={styles.languageModal} onStartShouldSetResponder={() => true}>
+              <Text style={styles.languageModalTitle}>Select Language</Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setLanguage('en');
+                  saveSettings({ language: 'en' });
+                  setShowLanguageModal(false);
+                }}
+                style={[styles.languageOption, language === 'en' && styles.languageOptionSelected]}
+              >
+                <Text style={styles.languageOptionText}>🇬🇧 English</Text>
+                {language === 'en' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setLanguage('fr');
+                  saveSettings({ language: 'fr' });
+                  setShowLanguageModal(false);
+                }}
+                style={[styles.languageOption, language === 'fr' && styles.languageOptionSelected]}
+              >
+                <Text style={styles.languageOptionText}>🇫🇷 Français</Text>
+                {language === 'fr' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setLanguage('es');
+                  saveSettings({ language: 'es' });
+                  setShowLanguageModal(false);
+                }}
+                style={[styles.languageOption, language === 'es' && styles.languageOptionSelected]}
+              >
+                <Text style={styles.languageOptionText}>🇪🇸 Español</Text>
+                {language === 'es' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowLanguageModal(false)}
+                style={styles.languageCancelButton}
+              >
+                <Text style={styles.languageCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Theme Color Modal */}
+      <Modal visible={showThemeModal} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setShowThemeModal(false)}
+            style={styles.modalOverlay}
+          >
+            <View style={styles.themeModal} onStartShouldSetResponder={() => true}>
+              <Text style={styles.themeModalTitle}>Select Theme Color</Text>
+
+              <View style={styles.themeColorGrid}>
+                {(Object.keys(themeColors) as Array<keyof typeof themeColors>).map((colorKey) => (
+                  <TouchableOpacity
+                    key={colorKey}
+                    onPress={() => {
+                      // TODO: Check if user has Pro
+                      setThemeColor(colorKey);
+                      saveSettings({ themeColor: colorKey });
+                      setShowThemeModal(false);
+                    }}
+                    style={[
+                      styles.themeColorOption,
+                      { backgroundColor: themeColors[colorKey].primary },
+                      themeColor === colorKey && styles.themeColorOptionSelected
+                    ]}
+                  >
+                    {themeColor === colorKey && <Text style={styles.themeColorCheck}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowThemeModal(false)}
+                style={styles.themeCancelButton}
+              >
+                <Text style={styles.themeCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       {/* Calendar Modal */}
       <Modal visible={showCalendarModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.calendarModal}>
             <View style={styles.calendarHeader}>
-              <Text style={styles.calendarTitle}>Select Date</Text>
-              <TouchableOpacity onPress={() => setShowCalendarModal(false)} style={styles.closeButton}>
+              {calendarViewMode === 'month' && (
+                <TouchableOpacity
+                  onPress={() => setCalendarViewMode('year')}
+                  style={styles.backButton}
+                >
+                  <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.calendarTitle}>
+                {calendarViewMode === 'year' && selectedYear}
+                {calendarViewMode === 'month' && `${new Date(selectedYear, selectedMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`}
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setShowCalendarModal(false);
+                setCalendarViewMode('year');
+              }} style={styles.closeButton}>
                 <CloseIcon />
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={generateCalendarDates()}
-              keyExtractor={(item) => item.date}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedDate(item.date);
-                    setShowCalendarModal(false);
-                  }}
-                  style={[
-                    styles.calendarDateItem,
-                    item.date === selectedDate && styles.calendarDateItemSelected
-                  ]}
-                >
-                  <View style={styles.calendarDateContent}>
-                    <Text style={[
-                      styles.calendarDateText,
-                      item.date === selectedDate && styles.calendarDateTextSelected
-                    ]}>
-                      {formatDisplayDate(item.date)}
-                    </Text>
-                    <Text style={styles.calendarDateFull}>{item.date}</Text>
-                  </View>
-                  {item.taskCount > 0 && (
-                    <View style={styles.calendarTaskBadge}>
-                      <Text style={styles.calendarTaskBadgeText}>{item.taskCount}</Text>
-                      {item.hasUnfinished && <Text style={styles.calendarUnfinishedDot}>●</Text>}
-                    </View>
-                  )}
+
+            {/* Year Navigation */}
+            {calendarViewMode === 'year' && (
+              <View style={styles.yearNavigation}>
+                <TouchableOpacity onPress={() => setSelectedYear(selectedYear - 1)} style={styles.yearNavButton}>
+                  <Text style={styles.yearNavText}>← {selectedYear - 1}</Text>
                 </TouchableOpacity>
-              )}
-            />
+                <TouchableOpacity onPress={() => setSelectedYear(new Date().getFullYear())} style={styles.yearNavButton}>
+                  <Text style={styles.yearNavTextCurrent}>Today</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setSelectedYear(selectedYear + 1)} style={styles.yearNavButton}>
+                  <Text style={styles.yearNavText}>{selectedYear + 1} →</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Year View: 12-month grid */}
+            {calendarViewMode === 'year' && (
+              <ScrollView>
+                <View style={styles.monthsGrid}>
+                  {(generateCalendarDates() as any).map((item: any) => {
+                    const today = new Date();
+                    const isCurrentMonth = selectedYear === today.getFullYear() && item.month === today.getMonth();
+                    return (
+                      <TouchableOpacity
+                        key={item.month}
+                        onPress={() => {
+                          setSelectedMonth(item.month);
+                          setCalendarViewMode('month');
+                        }}
+                        style={styles.monthGridItem}
+                      >
+                        <Text style={[
+                          styles.monthGridLabel,
+                          isCurrentMonth && styles.monthGridLabelCurrent
+                        ]}>{item.label}</Text>
+                        <View style={styles.monthGridBadgeContainer}>
+                          {item.taskCount > 0 && (
+                            <View style={styles.monthGridBadge}>
+                              <Text style={styles.monthGridBadgeText}>{item.taskCount}</Text>
+                              {item.hasUnfinished && <Text style={styles.calendarUnfinishedDot}>●</Text>}
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            )}
+
+            {/* Month View: Calendar grid */}
+            {calendarViewMode === 'month' && (
+              <ScrollView>
+                {/* Month Navigation */}
+                <View style={styles.monthNavigation}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (selectedMonth === 0) {
+                        setSelectedMonth(11);
+                        setSelectedYear(selectedYear - 1);
+                      } else {
+                        setSelectedMonth(selectedMonth - 1);
+                      }
+                    }}
+                    style={styles.monthNavButton}
+                  >
+                    <Text style={styles.monthNavText}>←</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const today = new Date();
+                      setSelectedYear(today.getFullYear());
+                      setSelectedMonth(today.getMonth());
+                    }}
+                    style={styles.monthNavButton}
+                  >
+                    <Text style={styles.yearNavTextCurrent}>Today</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (selectedMonth === 11) {
+                        setSelectedMonth(0);
+                        setSelectedYear(selectedYear + 1);
+                      } else {
+                        setSelectedMonth(selectedMonth + 1);
+                      }
+                    }}
+                    style={styles.monthNavButton}
+                  >
+                    <Text style={styles.monthNavText}>→</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.weekdayHeaders}>
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+                    <Text key={i} style={styles.weekdayHeader}>{day}</Text>
+                  ))}
+                </View>
+                <View style={styles.calendarGrid}>
+                  {(generateCalendarDates() as any).map((item: any, index: number) => {
+                    const today = formatDate(new Date());
+                    const isToday = item.date === today;
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        onPress={() => {
+                          setSelectedDate(item.date);
+                          setShowCalendarModal(false);
+                        }}
+                        style={[
+                          styles.calendarGridDay,
+                          !item.isCurrentMonth && styles.calendarGridDayOtherMonth
+                        ]}
+                      >
+                        <View style={[
+                          styles.calendarGridDayNumber,
+                          isToday && styles.calendarGridDayNumberSelected
+                        ]}>
+                          <Text style={[
+                            styles.calendarGridDayText,
+                            !item.isCurrentMonth && styles.calendarGridDayTextMuted,
+                            isToday && styles.calendarGridDayTextSelected
+                          ]}>
+                            {item.label}
+                          </Text>
+                        </View>
+                        <View style={styles.calendarGridDayDotContainer}>
+                          {item.taskCount > 0 && (
+                            <View style={styles.calendarGridDayDot}>
+                              <Text style={styles.calendarGridDayDotText}>{item.taskCount}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -938,41 +1704,45 @@ export default function Taskerino() {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: insets.bottom }]}>
+      <View style={[styles.bottomNav, { backgroundColor: cardBg, paddingBottom: insets.bottom }]}>
         <TouchableOpacity
           onPress={() => setCurrentTab('tasks')}
           style={styles.navItem}
           activeOpacity={0.7}
         >
-          <CalendarIcon color={currentTab === 'tasks' ? colors.sage : colors.textMuted} />
-          <Text style={[styles.navLabel, currentTab === 'tasks' && { color: colors.sage }]}>Tasks</Text>
+          <CalendarIcon color={currentTab === 'tasks' ? theme.primary : textMuted} />
+          <Text style={[styles.navLabel, { color: currentTab === 'tasks' ? theme.primary : textMuted }]}>Tasks</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => setShowCalendarModal(true)}
-          style={styles.navItem}
-          activeOpacity={0.7}
-        >
-          <CalendarIcon color={colors.textMuted} />
-          <Text style={styles.navLabel}>Calendar</Text>
-        </TouchableOpacity>
+        {goalsEnabled && (
+          <TouchableOpacity
+            onPress={() => setCurrentTab('goals')}
+            style={styles.navItem}
+            activeOpacity={0.7}
+          >
+            <GoalsIcon color={currentTab === 'goals' ? theme.primary : textMuted} />
+            <Text style={[styles.navLabel, { color: currentTab === 'goals' ? theme.primary : textMuted }]}>Goals</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          onPress={() => setCurrentTab('tips')}
-          style={styles.navItem}
-          activeOpacity={0.7}
-        >
-          <LightbulbIcon color={currentTab === 'tips' ? colors.sage : colors.textMuted} />
-          <Text style={[styles.navLabel, currentTab === 'tips' && { color: colors.sage }]}>Tips</Text>
-        </TouchableOpacity>
+        {tipsEnabled && (
+          <TouchableOpacity
+            onPress={() => setCurrentTab('tips')}
+            style={styles.navItem}
+            activeOpacity={0.7}
+          >
+            <LightbulbIcon color={currentTab === 'tips' ? theme.primary : textMuted} />
+            <Text style={[styles.navLabel, { color: currentTab === 'tips' ? theme.primary : textMuted }]}>Tips</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           onPress={() => setCurrentTab('profile')}
           style={styles.navItem}
           activeOpacity={0.7}
         >
-          <ProfileIcon color={currentTab === 'profile' ? colors.sage : colors.textMuted} />
-          <Text style={[styles.navLabel, currentTab === 'profile' && { color: colors.sage }]}>Profile</Text>
+          <ProfileIcon color={currentTab === 'profile' ? theme.primary : textMuted} />
+          <Text style={[styles.navLabel, { color: currentTab === 'profile' ? theme.primary : textMuted }]}>Profile</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -980,8 +1750,8 @@ export default function Taskerino() {
           style={styles.navItem}
           activeOpacity={0.7}
         >
-          <SettingsIcon color={currentTab === 'settings' ? colors.sage : colors.textMuted} />
-          <Text style={[styles.navLabel, currentTab === 'settings' && { color: colors.sage }]}>Settings</Text>
+          <SettingsIcon color={currentTab === 'settings' ? theme.primary : textMuted} />
+          <Text style={[styles.navLabel, { color: currentTab === 'settings' ? theme.primary : textMuted }]}>Settings</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -1051,9 +1821,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 32,
     color: colors.sage,
-    textShadowColor: 'rgba(106,155,114,0.2)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 0,
   },
   greeting: {
     fontSize: 15,
@@ -1117,18 +1884,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.sageDark,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 6,
   },
   allDoneBanner: {
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
-    backgroundColor: colors.mint,
+    backgroundColor: colors.sage,
+    width: '100%',
   },
   allDoneEmoji: {
     fontSize: 40,
@@ -1138,9 +1901,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 20,
     color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.1)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   allDoneSubtitle: {
     fontSize: 14,
@@ -1177,16 +1937,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 8,
   },
   doneSection: {
-    marginTop: 32,
+    marginTop: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionIcon: {
     fontSize: 20,
@@ -1247,9 +2007,45 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   dateSelectorText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.sage,
+  },
+  dateNavigator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  dateArrow: {
+    width: 44,
+    height: 44,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  dateArrowText: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  dateSelectorWide: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   bottomNav: {
     flexDirection: 'row',
@@ -1285,7 +2081,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '80%',
+    height: 520,
     paddingTop: 20,
   },
   calendarHeader: {
@@ -1296,6 +2092,220 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.bgPeach,
+  },
+  backButton: {
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.sage,
+  },
+  yearNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.bgPeach,
+  },
+  yearNavButton: {
+    padding: 8,
+  },
+  yearNavText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  yearNavTextCurrent: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.sage,
+  },
+  monthsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 12,
+  },
+  monthGridItem: {
+    width: '33.33%',
+    height: 80,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  monthGridLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textDark,
+    textAlign: 'center',
+  },
+  monthGridLabelCurrent: {
+    color: colors.sage,
+    fontWeight: '800',
+  },
+  monthGridBadgeContainer: {
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  monthGridBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: colors.mint,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  monthGridBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textDark,
+  },
+  monthNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.bgPeach,
+  },
+  monthNavButton: {
+    padding: 8,
+  },
+  monthNavText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  weekdayHeaders: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  weekdayHeader: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 12,
+  },
+  calendarGridDay: {
+    width: `${100 / 7}%`,
+    height: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  calendarGridDayNumber: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
+  },
+  calendarGridDayNumberSelected: {
+    backgroundColor: colors.sage,
+  },
+  calendarGridDayOtherMonth: {
+    opacity: 0.3,
+  },
+  calendarGridDayText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textDark,
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  calendarGridDayTextMuted: {
+    color: colors.textMuted,
+  },
+  calendarGridDayTextSelected: {
+    color: '#fff',
+    fontWeight: '800',
+  },
+  calendarGridDayTextToday: {
+    color: colors.sage,
+    fontWeight: '800',
+  },
+  calendarGridDayDotContainer: {
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  calendarGridDayDot: {
+    backgroundColor: colors.mint,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  calendarGridDayDotText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textDark,
+  },
+  weekSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  weekDaysContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  weekDayItem: {
+    flex: 1,
+    backgroundColor: colors.bgPeach,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  weekDayItemSelected: {
+    backgroundColor: colors.sage,
+  },
+  weekDayName: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    marginBottom: 6,
+  },
+  weekDayNameSelected: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+  weekDayNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textDark,
+  },
+  weekDayNumberSelected: {
+    color: '#fff',
+  },
+  weekDayDot: {
+    marginTop: 6,
+    backgroundColor: colors.mint,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  weekDayDotText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textDark,
   },
   calendarTitle: {
     fontSize: 22,
@@ -1383,8 +2393,8 @@ const styles = StyleSheet.create({
   profileStats: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 24,
-    width: '100%',
+    marginBottom: 24,
+    paddingHorizontal: 20,
   },
   profileStatItem: {
     flex: 1,
@@ -1413,12 +2423,223 @@ const styles = StyleSheet.create({
   badgesList: {
     paddingHorizontal: 20,
   },
-  badgesSectionTitle: {
-    fontSize: 20,
+  taskList: {
+    paddingHorizontal: 20,
+  },
+  goalsSection: {
+    marginBottom: 32,
+  },
+  goalsSectionTitle: {
+    fontSize: 22,
     fontWeight: '800',
     color: colors.textDark,
     marginBottom: 16,
     marginTop: 8,
+  },
+  goalsPageHeader: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  goalsPageTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 8,
+  },
+  goalsPageSubtitle: {
+    fontSize: 16,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+  goalsPageContent: {
+    paddingHorizontal: 20,
+  },
+  goalsEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  goalsEmptyStateEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  goalsEmptyStateText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textDark,
+    marginBottom: 8,
+  },
+  goalsEmptyStateSubtext: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  goalInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  goalInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.textDark,
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  goalAddButton: {
+    backgroundColor: colors.sage,
+    borderRadius: 16,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  goalAddButtonText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  goalCategory: {
+    marginBottom: 20,
+  },
+  goalCategoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  goalCategoryTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textDark,
+  },
+  goalCategoryToggle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  goalItem: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  goalText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textDark,
+  },
+  goalTextCompleted: {
+    textDecorationLine: 'line-through',
+    color: colors.textMuted,
+  },
+  goalActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  goalStatusButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.bgPeach,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  goalStatusButtonText: {
+    fontSize: 18,
+  },
+  goalDeleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.bgPeach,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  goalDeleteButtonText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  goalStatusModal: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 20,
+    shadowColor: '#4A4F4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  goalStatusModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  goalStatusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgPeach,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  goalStatusOptionEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  goalStatusOptionText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textDark,
+  },
+  goalStatusCancelButton: {
+    backgroundColor: colors.sage,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  goalStatusCancelText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  achievementsToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  achievementsToggleIcon: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  badgesSectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.textDark,
   },
   badgeCategoryTitle: {
     fontSize: 15,
@@ -1642,6 +2863,172 @@ const styles = StyleSheet.create({
     color: colors.sage,
     textAlign: 'center',
   },
+  settingsToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  settingsDescription: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  settingsArrow: {
+    fontSize: 24,
+    color: colors.textMuted,
+    fontWeight: '300',
+  },
+  toggle: {
+    width: 51,
+    height: 31,
+    borderRadius: 15.5,
+    backgroundColor: colors.textMuted,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleActive: {
+    backgroundColor: colors.sage,
+  },
+  toggleThumb: {
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleThumbActive: {
+    transform: [{ translateX: 20 }],
+  },
+  proBadgeSmall: {
+    backgroundColor: colors.gold,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  proBadgeSmallText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  languageModal: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    margin: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  languageModalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  languageOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: colors.bgCream,
+  },
+  languageOptionSelected: {
+    backgroundColor: colors.sage,
+  },
+  languageOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textDark,
+  },
+  languageOptionCheck: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  languageCancelButton: {
+    marginTop: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  languageCancelText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  themeColorPreview: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  themeModal: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    margin: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  themeModalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textDark,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  themeColorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'center',
+  },
+  themeColorOption: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  themeColorOptionSelected: {
+    borderWidth: 3,
+    borderColor: colors.textDark,
+  },
+  themeColorCheck: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  themeCancelButton: {
+    marginTop: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  themeCancelText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
   proCard: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -1775,5 +3162,16 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textMuted,
     fontWeight: '500',
+  },
+  clearAllButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textDecorationLine: 'underline',
+  },
+  clearAllButtonContainer: {
+    marginTop: 24,
+    marginBottom: 20,
+    alignItems: 'center',
   },
 });
