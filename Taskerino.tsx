@@ -119,12 +119,12 @@ const badges = [
 ];
 
 const themeColors = {
-  sage: { primary: '#8FB996', dark: '#6A9B72', light: '#A8D5BA' },
-  ocean: { primary: '#6B9DC4', dark: '#4A7BA7', light: '#8DB4D8' },
-  lavender: { primary: '#B89FD9', dark: '#9378BA', light: '#C4B7D6' },
-  coral: { primary: '#E8967D', dark: '#D17159', light: '#F0B39E' },
-  rose: { primary: '#E89FB5', dark: '#D17A95', light: '#F0BAC8' },
-  midnight: { primary: '#6B7B9D', dark: '#4A5A7A', light: '#8A9AB8' },
+  sage: { primary: '#8FB996', secondary: '#6A9B72', accent: '#A8D5BA' },
+  ocean: { primary: '#6B9DC4', secondary: '#4A7BA7', accent: '#8DB4D8' },
+  lavender: { primary: '#B89FD9', secondary: '#9378BA', accent: '#C4B7D6' },
+  coral: { primary: '#E8967D', secondary: '#D17159', accent: '#F0B39E' },
+  rose: { primary: '#E89FB5', secondary: '#D17A95', accent: '#F0BAC8' },
+  midnight: { primary: '#6B7B9D', secondary: '#4A5A7A', accent: '#8A9AB8' },
 };
 
 const colors = {
@@ -147,11 +147,15 @@ const colors = {
   bronze: '#CD7F32'
 };
 
+type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'custom';
+
 interface Task {
   id: number;
   text: string;
   completed: boolean;
   date: string; // YYYY-MM-DD format
+  repeat?: RepeatType;
+  customDays?: number[]; // 0-6 (Sunday-Saturday) for custom repeat
 }
 
 interface Goal {
@@ -276,8 +280,19 @@ function GoalsIcon({ color = colors.textMuted }: { color?: string }) {
     </Svg>
   );
 }
+
+function RepeatIcon({ color = colors.textMuted, size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M17 1l4 4-4 4" />
+      <Path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <Path d="M7 23l-4-4 4-4" />
+      <Path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </Svg>
+  );
+}
 /* eslint-disable react-native/no-inline-styles */
-function TaskItem({ task, onToggle, onDelete, cardBg, text, textMuted }: { task: Task; onToggle: (id: number) => void; onDelete: (id: number) => void; cardBg: string; text: string; textMuted: string }) {
+function TaskItem({ task, onToggle, onDelete, onEditRepeat, cardBg, text, textMuted, theme }: { task: Task; onToggle: (id: number) => void; onDelete: (id: number) => void; onEditRepeat: (task: Task) => void; cardBg: string; text: string; textMuted: string; theme: { primary: string; secondary: string; accent: string } }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -299,12 +314,23 @@ function TaskItem({ task, onToggle, onDelete, cardBg, text, textMuted }: { task:
       ]}>
         {task.completed && <CheckIcon />}
       </TouchableOpacity>
-      <Text style={[
-        styles.taskText,
-        { color: task.completed ? textMuted : text, textDecorationLine: task.completed ? 'line-through' : 'none' }
-      ]} numberOfLines={3}>
-        {task.text}
-      </Text>
+      <View style={styles.taskTextContainer}>
+        <Text style={[
+          styles.taskText,
+          { color: task.completed ? textMuted : text, textDecorationLine: task.completed ? 'line-through' : 'none' }
+        ]} numberOfLines={3}>
+          {task.text}
+        </Text>
+        {task.repeat && task.repeat !== 'none' && (
+          <TouchableOpacity
+            style={[styles.repeatIndicator, { backgroundColor: theme.primary + '20' }]}
+            onPress={() => onEditRepeat(task)}
+            activeOpacity={0.7}
+          >
+            <RepeatIcon color={theme.primary} size={14} />
+          </TouchableOpacity>
+        )}
+      </View>
       <TouchableOpacity onPress={() => onDelete(task.id)} style={styles.deleteButton}>
         <CloseIcon />
       </TouchableOpacity>
@@ -403,8 +429,13 @@ export default function Taskerino() {
   const [soundsEnabled, setSoundsEnabled] = useState(true);
   const [tipsEnabled, setTipsEnabled] = useState(true);
   const [goalsEnabled, setGoalsEnabled] = useState(false);
+  const [profileEnabled, setProfileEnabled] = useState(true);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showRepeatModal, setShowRepeatModal] = useState(false);
+  const [repeatType, setRepeatType] = useState<RepeatType>('none');
+  const [customDays, setCustomDays] = useState<number[]>([]);
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
 
   useEffect(() => {
     loadTasks();
@@ -507,6 +538,7 @@ export default function Taskerino() {
         setNotificationsEnabled(settings.notificationsEnabled ?? false);
         setTipsEnabled(settings.tipsEnabled ?? true);
         setGoalsEnabled(settings.goalsEnabled ?? false);
+        setProfileEnabled(settings.profileEnabled ?? true);
         setSoundsEnabled(settings.soundsEnabled ?? true);
       }
     } catch (error) {
@@ -514,7 +546,7 @@ export default function Taskerino() {
     }
   };
 
-  const saveSettings = async (newSettings: { darkMode?: boolean; themeColor?: string; language?: string; notificationsEnabled?: boolean; tipsEnabled?: boolean; goalsEnabled?: boolean; soundsEnabled?: boolean }) => {
+  const saveSettings = async (newSettings: { darkMode?: boolean; themeColor?: string; language?: string; notificationsEnabled?: boolean; tipsEnabled?: boolean; goalsEnabled?: boolean; profileEnabled?: boolean; soundsEnabled?: boolean }) => {
     try {
       const saved = await AsyncStorage.getItem('taskerino-settings');
       const current = saved ? JSON.parse(saved) : {};
@@ -556,8 +588,18 @@ export default function Taskerino() {
 
   const addTask = () => {
     if (!input.trim()) return;
-    setTasks([{ id: Date.now(), text: input.trim(), completed: false, date: selectedDate }, ...tasks]);
+    const newTask: Task = {
+      id: Date.now(),
+      text: input.trim(),
+      completed: false,
+      date: selectedDate,
+      repeat: repeatType,
+      customDays: repeatType === 'custom' ? customDays : undefined
+    };
+    setTasks([newTask, ...tasks]);
     setInput('');
+    setRepeatType('none');
+    setCustomDays([]);
   };
 
   const toggleTask = (id: number) => {
@@ -580,6 +622,13 @@ export default function Taskerino() {
   };
 
   const deleteTask = (id: number) => setTasks(tasks.filter(t => t.id !== id));
+
+  const handleEditRepeat = (task: Task) => {
+    setEditingTaskId(task.id);
+    setRepeatType(task.repeat || 'none');
+    setCustomDays(task.customDays || []);
+    setShowRepeatModal(true);
+  };
 
   // Filter tasks by selected date
   const tasksForDate = tasks.filter(t => t.date === selectedDate);
@@ -951,9 +1000,11 @@ export default function Taskerino() {
                   task={{ id: goal.id, text: goal.text, completed: goal.completed, date: '' }}
                   onToggle={toggleGoal}
                   onDelete={deleteGoal}
+                  onEditRepeat={() => {}}
                   cardBg={cardBg}
                   text={text}
                   textMuted={textMuted}
+                  theme={theme}
                 />
               ))}
             </View>
@@ -971,9 +1022,11 @@ export default function Taskerino() {
                   task={{ id: goal.id, text: goal.text, completed: goal.completed, date: '' }}
                   onToggle={toggleGoal}
                   onDelete={deleteGoal}
+                  onEditRepeat={() => {}}
                   cardBg={cardBg}
                   text={text}
                   textMuted={textMuted}
+                  theme={theme}
                 />
               ))}
             </View>
@@ -1086,25 +1139,6 @@ export default function Taskerino() {
               </View>
             </View>
 
-            {/* Tips */}
-            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
-              <View style={styles.settingsToggleRow}>
-                <View>
-                  <Text style={[styles.settingsLabel, { color: text }]}>Tips</Text>
-                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Show helpful tips and guidance</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    setTipsEnabled(!tipsEnabled);
-                    saveSettings({ tipsEnabled: !tipsEnabled });
-                  }}
-                  style={[styles.toggle, { backgroundColor: tipsEnabled ? theme.primary : textMuted }, tipsEnabled && styles.toggleActive]}
-                >
-                  <View style={[styles.toggleThumb, tipsEnabled && styles.toggleThumbActive]} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
             {/* Sounds */}
             <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
               <View style={styles.settingsToggleRow}>
@@ -1141,9 +1175,9 @@ export default function Taskerino() {
             </TouchableOpacity>
           </View>
 
-          {/* Pro Features */}
+          {/* Menu Items */}
           <View style={styles.settingsSection}>
-            <Text style={[styles.settingsSectionTitle, { color: text }]}>Pro Features</Text>
+            <Text style={[styles.settingsSectionTitle, { color: text }]}>Menu Items</Text>
 
             {/* Goals Toggle */}
             <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
@@ -1155,7 +1189,7 @@ export default function Taskerino() {
                       <Text style={styles.proBadgeSmallText}>PRO</Text>
                     </View>
                   </View>
-                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Enable long-term goals tracking</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Show Goals in bottom menu</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => {
@@ -1169,6 +1203,49 @@ export default function Taskerino() {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Profile */}
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <View style={styles.settingsToggleRow}>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: text }]}>Profile</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Show Profile in bottom menu</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setProfileEnabled(!profileEnabled);
+                    saveSettings({ profileEnabled: !profileEnabled });
+                  }}
+                  style={[styles.toggle, { backgroundColor: profileEnabled ? theme.primary : textMuted }, profileEnabled && styles.toggleActive]}
+                >
+                  <View style={[styles.toggleThumb, profileEnabled && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Tips */}
+            <View style={[styles.settingsCard, { backgroundColor: cardBg }]}>
+              <View style={styles.settingsToggleRow}>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: text }]}>Tips</Text>
+                  <Text style={[styles.settingsDescription, { color: textMuted }]}>Show Tips in bottom menu</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setTipsEnabled(!tipsEnabled);
+                    saveSettings({ tipsEnabled: !tipsEnabled });
+                  }}
+                  style={[styles.toggle, { backgroundColor: tipsEnabled ? theme.primary : textMuted }, tipsEnabled && styles.toggleActive]}
+                >
+                  <View style={[styles.toggleThumb, tipsEnabled && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Pro Features */}
+          <View style={styles.settingsSection}>
+            <Text style={[styles.settingsSectionTitle, { color: text }]}>Pro Features</Text>
 
 
             {/* Pro Upgrade Card */}
@@ -1288,6 +1365,13 @@ export default function Taskerino() {
             maxLength={200}
             style={[styles.input, { color: text }]}
           />
+          <TouchableOpacity
+            onPress={() => setShowRepeatModal(true)}
+            style={[styles.repeatButton, { backgroundColor: repeatType !== 'none' ? theme.primary + '20' : 'transparent' }]}
+            activeOpacity={0.7}
+          >
+            <RepeatIcon color={repeatType !== 'none' ? theme.primary : textMuted} size={20} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={addTask} style={styles.addButton} activeOpacity={0.7}>
             <PlusIcon />
           </TouchableOpacity>
@@ -1317,7 +1401,7 @@ export default function Taskerino() {
               <Text style={styles.sectionIcon}>📋</Text>
               <Text style={[styles.sectionTitle, { color: text }]}>Let's do this!</Text>
             </View>
-            {todo.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} cardBg={cardBg} text={text} textMuted={textMuted} />)}
+            {todo.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} onEditRepeat={handleEditRepeat} cardBg={cardBg} text={text} textMuted={textMuted} theme={theme} />)}
           </View>
         )}
 
@@ -1327,7 +1411,7 @@ export default function Taskerino() {
               <Text style={styles.sectionIcon}>✨</Text>
               <Text style={[styles.sectionTitle, { color: colors.mintDark }]}>Conquered!</Text>
             </View>
-            {done.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} cardBg={cardBg} text={text} textMuted={textMuted} />)}
+            {done.map(t => <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} onEditRepeat={handleEditRepeat} cardBg={cardBg} text={text} textMuted={textMuted} theme={theme} />)}
           </View>
         )}
 
@@ -1526,6 +1610,194 @@ export default function Taskerino() {
                 style={styles.themeCancelButton}
               >
                 <Text style={styles.themeCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* Repeat Modal */}
+      <Modal visible={showRepeatModal} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {
+              setShowRepeatModal(false);
+              setEditingTaskId(null);
+              if (editingTaskId === null) {
+                setRepeatType('none');
+                setCustomDays([]);
+              }
+            }}
+            style={styles.modalOverlay}
+          >
+            <View style={[styles.languageModal, { backgroundColor: cardBg }]} onStartShouldSetResponder={() => true}>
+              <Text style={[styles.languageModalTitle, { color: text }]}>Repeat Task</Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (editingTaskId !== null) {
+                    setTasks(tasks.map(t =>
+                      t.id === editingTaskId
+                        ? { ...t, repeat: 'none', customDays: undefined }
+                        : t
+                    ));
+                    setEditingTaskId(null);
+                    setRepeatType('none');
+                    setCustomDays([]);
+                  } else {
+                    setRepeatType('none');
+                  }
+                  setShowRepeatModal(false);
+                }}
+                style={[styles.languageOption, repeatType === 'none' && { backgroundColor: theme.primary }]}
+              >
+                <Text style={[styles.languageOptionText, { color: repeatType === 'none' ? '#fff' : text }]}>🚫 None</Text>
+                {repeatType === 'none' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (editingTaskId !== null) {
+                    setTasks(tasks.map(t =>
+                      t.id === editingTaskId
+                        ? { ...t, repeat: 'daily', customDays: undefined }
+                        : t
+                    ));
+                    setEditingTaskId(null);
+                    setRepeatType('none');
+                    setCustomDays([]);
+                  } else {
+                    setRepeatType('daily');
+                  }
+                  setShowRepeatModal(false);
+                }}
+                style={[styles.languageOption, repeatType === 'daily' && { backgroundColor: theme.primary }]}
+              >
+                <Text style={[styles.languageOptionText, { color: repeatType === 'daily' ? '#fff' : text }]}>☀️ Daily</Text>
+                {repeatType === 'daily' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (editingTaskId !== null) {
+                    setTasks(tasks.map(t =>
+                      t.id === editingTaskId
+                        ? { ...t, repeat: 'weekly', customDays: undefined }
+                        : t
+                    ));
+                    setEditingTaskId(null);
+                    setRepeatType('none');
+                    setCustomDays([]);
+                  } else {
+                    setRepeatType('weekly');
+                  }
+                  setShowRepeatModal(false);
+                }}
+                style={[styles.languageOption, repeatType === 'weekly' && { backgroundColor: theme.primary }]}
+              >
+                <Text style={[styles.languageOptionText, { color: repeatType === 'weekly' ? '#fff' : text }]}>📅 Weekly</Text>
+                {repeatType === 'weekly' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (editingTaskId !== null) {
+                    setTasks(tasks.map(t =>
+                      t.id === editingTaskId
+                        ? { ...t, repeat: 'monthly', customDays: undefined }
+                        : t
+                    ));
+                    setEditingTaskId(null);
+                    setRepeatType('none');
+                    setCustomDays([]);
+                  } else {
+                    setRepeatType('monthly');
+                  }
+                  setShowRepeatModal(false);
+                }}
+                style={[styles.languageOption, repeatType === 'monthly' && { backgroundColor: theme.primary }]}
+              >
+                <Text style={[styles.languageOptionText, { color: repeatType === 'monthly' ? '#fff' : text }]}>🗓️ Monthly</Text>
+                {repeatType === 'monthly' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setRepeatType('custom');
+                  // Don't close modal, show custom day picker
+                }}
+                style={[styles.languageOption, repeatType === 'custom' && { backgroundColor: theme.primary }]}
+              >
+                <Text style={[styles.languageOptionText, { color: repeatType === 'custom' ? '#fff' : text }]}>⚙️ Custom Days</Text>
+                {repeatType === 'custom' && <Text style={styles.languageOptionCheck}>✓</Text>}
+              </TouchableOpacity>
+
+              {repeatType === 'custom' && (
+                <View style={styles.customDaysContainer}>
+                  <View style={styles.daysGrid}>
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
+                      // Adjust index: Mon=1, Tue=2, ..., Sat=6, Sun=0
+                      const dayIndex = index === 6 ? 0 : index + 1;
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          onPress={() => {
+                            if (customDays.includes(dayIndex)) {
+                              setCustomDays(customDays.filter(d => d !== dayIndex));
+                            } else {
+                              setCustomDays([...customDays, dayIndex].sort());
+                            }
+                          }}
+                          style={[
+                            styles.dayButton,
+                            { borderColor: theme.primary },
+                            customDays.includes(dayIndex) && { backgroundColor: theme.primary }
+                          ]}
+                        >
+                          <Text style={[
+                            styles.dayButtonText,
+                            { color: customDays.includes(dayIndex) ? '#fff' : text }
+                          ]}>
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (editingTaskId !== null) {
+                        setTasks(tasks.map(t =>
+                          t.id === editingTaskId
+                            ? { ...t, repeat: 'custom', customDays: customDays }
+                            : t
+                        ));
+                        setEditingTaskId(null);
+                        setRepeatType('none');
+                        setCustomDays([]);
+                      }
+                      setShowRepeatModal(false);
+                    }}
+                    style={[styles.customDaysDoneButton, { backgroundColor: theme.primary }]}
+                  >
+                    <Text style={styles.customDaysDoneText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={() => {
+                  setShowRepeatModal(false);
+                  setEditingTaskId(null);
+                  if (editingTaskId === null) {
+                    setRepeatType('none');
+                    setCustomDays([]);
+                  }
+                }}
+                style={styles.languageCancelButton}
+              >
+                <Text style={styles.languageCancelText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -1736,14 +2008,16 @@ export default function Taskerino() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          onPress={() => setCurrentTab('profile')}
-          style={styles.navItem}
-          activeOpacity={0.7}
-        >
-          <ProfileIcon color={currentTab === 'profile' ? theme.primary : textMuted} />
-          <Text style={[styles.navLabel, { color: currentTab === 'profile' ? theme.primary : textMuted }]}>Profile</Text>
-        </TouchableOpacity>
+        {profileEnabled && (
+          <TouchableOpacity
+            onPress={() => setCurrentTab('profile')}
+            style={styles.navItem}
+            activeOpacity={0.7}
+          >
+            <ProfileIcon color={currentTab === 'profile' ? theme.primary : textMuted} />
+            <Text style={[styles.navLabel, { color: currentTab === 'profile' ? theme.primary : textMuted }]}>Profile</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           onPress={() => setCurrentTab('settings')}
@@ -1885,6 +2159,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  repeatButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   allDoneBanner: {
     borderRadius: 24,
     padding: 24,
@@ -1978,10 +2259,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  taskTextContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   taskText: {
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
+  },
+  repeatIndicator: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   deleteButton: {
     width: 36,
@@ -2963,6 +3255,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.textMuted,
+  },
+  customDaysContainer: {
+    marginTop: 16,
+    gap: 16,
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    gap: 6,
+    justifyContent: 'space-between',
+  },
+  dayButton: {
+    flex: 1,
+    aspectRatio: 1,
+    minWidth: 40,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  customDaysDoneButton: {
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  customDaysDoneText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
   themeColorPreview: {
     width: 40,
