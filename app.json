@@ -1,4 +1,9 @@
 {
   "name": "taskerino_ReactNative",
-  "displayName": "taskerino_ReactNative"
+  "displayName": "taskerino_ReactNative",
+  "extra": {
+    "eas": {
+      "projectId": "291eba73-7105-4636-af19-c36d09bd7e4b"
+    }
+  }
 }

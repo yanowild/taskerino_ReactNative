@@ -113,9 +113,6 @@ const badges = [
   { id: 7, emoji: "✨", title: "First Win", description: "Completed your first task", detailedDescription: "You did it! Completing your first task is a special moment. Here's to many more victories!", requirement: 1, type: "completed" },
   { id: 8, emoji: "⭐", title: "Star Player", description: "Completed 25 tasks", detailedDescription: "Look at you go! 25 completed tasks proves you're not just creating tasks, you're crushing them!", requirement: 25, type: "completed" },
   { id: 9, emoji: "🏆", title: "Champion", description: "Completed 100 tasks", detailedDescription: "Legendary status achieved! 100 completed tasks makes you a true productivity champion!", requirement: 100, type: "completed" },
-  { id: 10, emoji: "🎯", title: "Focused", description: "Completed all tasks in a day", detailedDescription: "Perfect execution! You completed every task you set for yourself in a single day. That's focus!", requirement: 1, type: "perfect_day" },
-  { id: 11, emoji: "🚀", title: "Skyrocket", description: "Created 10 tasks in one day", detailedDescription: "Super productive day! Creating 10+ tasks shows serious planning energy. You're on fire!", requirement: 10, type: "productive_day" },
-  { id: 12, emoji: "🌟", title: "Steady", description: "Completed tasks 5 days in a row", detailedDescription: "Steady wins the race! Completing tasks 5 days straight shows true dedication to progress.", requirement: 5, type: "completion_streak" },
 ];
 
 const themeColors = {
@@ -152,10 +149,11 @@ type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'custom';
 interface Task {
   id: number;
   text: string;
-  completed: boolean;
+  completed: boolean; // For backwards compatibility (completion on original date)
   date: string; // YYYY-MM-DD format
   repeat?: RepeatType;
   customDays?: number[]; // 0-6 (Sunday-Saturday) for custom repeat
+  completedDates?: string[]; // Array of dates where this task was completed (YYYY-MM-DD)
 }
 
 interface Goal {
@@ -418,7 +416,7 @@ export default function Taskerino() {
   const [currentStreak, setCurrentStreak] = useState<number>(0);
   const [selectedBadge, setSelectedBadge] = useState<(typeof badges[0] & { unlocked: boolean; progress: number }) | null>(null);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
-  const [calendarViewMode, setCalendarViewMode] = useState<'month' | 'year'>('year');
+  const [calendarViewMode, setCalendarViewMode] = useState<'month' | 'year'>('month');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -436,12 +434,16 @@ export default function Taskerino() {
   const [repeatType, setRepeatType] = useState<RepeatType>('none');
   const [customDays, setCustomDays] = useState<number[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [totalCompletedCount, setTotalCompletedCount] = useState<number>(0);
+  const celebrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadTasks();
     loadStreakData();
     loadGoals();
     loadSettings();
+    loadTotalCompletedCount();
     const hour = new Date().getHours();
     const time = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
     setGreeting(greetings[time][Math.floor(Math.random() * greetings[time].length)]);
@@ -557,6 +559,27 @@ export default function Taskerino() {
     }
   };
 
+  const loadTotalCompletedCount = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('taskerino-total-completed');
+      if (saved) {
+        setTotalCompletedCount(parseInt(saved, 10));
+      }
+    } catch (error) {
+      console.error('Failed to load total completed count:', error);
+    }
+  };
+
+  const incrementTotalCompletedCount = async () => {
+    try {
+      const newCount = totalCompletedCount + 1;
+      setTotalCompletedCount(newCount);
+      await AsyncStorage.setItem('taskerino-total-completed', newCount.toString());
+    } catch (error) {
+      console.error('Failed to save total completed count:', error);
+    }
+  };
+
   const addGoal = () => {
     if (!goalInput.trim()) return;
     setGoals([{ id: Date.now(), text: goalInput.trim(), completed: false }, ...goals]);
@@ -567,14 +590,32 @@ export default function Taskerino() {
     setGoals(goals.map(g => {
       if (g.id === id) {
         if (!g.completed) {
-          setConfetti(Array.from({ length: 30 }, (_, i) => ({
-            id: i,
-            x: Math.random() * 100,
-            color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
-            delay: i * 30
-          })));
-          setCelebration(celebrations[Math.floor(Math.random() * celebrations.length)]);
-          setTimeout(() => { setConfetti([]); setCelebration(null); }, 2000);
+          // Clear any existing celebration timeout
+          if (celebrationTimeoutRef.current) {
+            clearTimeout(celebrationTimeoutRef.current);
+          }
+
+          // Clear previous confetti and celebration immediately
+          setConfetti([]);
+          setCelebration(null);
+
+          // Small delay to ensure state is cleared before showing new celebration
+          setTimeout(() => {
+            setConfetti(Array.from({ length: 30 }, (_, i) => ({
+              id: i,
+              x: Math.random() * 100,
+              color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+              delay: i * 30
+            })));
+            setCelebration(celebrations[Math.floor(Math.random() * celebrations.length)]);
+          }, 10);
+
+          // Store the new timeout reference
+          celebrationTimeoutRef.current = setTimeout(() => {
+            setConfetti([]);
+            setCelebration(null);
+            celebrationTimeoutRef.current = null;
+          }, 2000);
         }
         return { ...g, completed: !g.completed };
       }
@@ -605,17 +646,55 @@ export default function Taskerino() {
   const toggleTask = (id: number) => {
     setTasks(tasks.map(t => {
       if (t.id === id) {
-        if (!t.completed) {
-          setConfetti(Array.from({ length: 30 }, (_, i) => ({
-            id: i,
-            x: Math.random() * 100,
-            color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
-            delay: i * 30
-          })));
-          setCelebration(celebrations[Math.floor(Math.random() * celebrations.length)]);
-          setTimeout(() => { setConfetti([]); setCelebration(null); }, 2000);
+        const isCurrentlyCompleted = isTaskCompletedOnDate(t, selectedDate);
+
+        // Show confetti if marking as complete
+        if (!isCurrentlyCompleted) {
+          // Increment total completed count
+          incrementTotalCompletedCount();
+
+          // Clear any existing celebration timeout
+          if (celebrationTimeoutRef.current) {
+            clearTimeout(celebrationTimeoutRef.current);
+          }
+
+          // Clear previous confetti and celebration immediately
+          setConfetti([]);
+          setCelebration(null);
+
+          // Small delay to ensure state is cleared before showing new celebration
+          setTimeout(() => {
+            setConfetti(Array.from({ length: 30 }, (_, i) => ({
+              id: i,
+              x: Math.random() * 100,
+              color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+              delay: i * 30
+            })));
+            setCelebration(celebrations[Math.floor(Math.random() * celebrations.length)]);
+          }, 10);
+
+          // Store the new timeout reference
+          celebrationTimeoutRef.current = setTimeout(() => {
+            setConfetti([]);
+            setCelebration(null);
+            celebrationTimeoutRef.current = null;
+          }, 2000);
         }
-        return { ...t, completed: !t.completed };
+
+        // If toggling on the original date
+        if (t.date === selectedDate) {
+          return { ...t, completed: !t.completed };
+        }
+
+        // If toggling on a repeated date
+        const completedDates = t.completedDates || [];
+        if (isCurrentlyCompleted) {
+          // Remove this date from completed dates
+          return { ...t, completedDates: completedDates.filter(d => d !== selectedDate) };
+        } else {
+          // Add this date to completed dates
+          return { ...t, completedDates: [...completedDates, selectedDate] };
+        }
       }
       return t;
     }));
@@ -625,13 +704,76 @@ export default function Taskerino() {
 
   const handleEditRepeat = (task: Task) => {
     setEditingTaskId(task.id);
-    setRepeatType(task.repeat || 'none');
-    setCustomDays(task.customDays || []);
+    const currentRepeat = task.repeat || 'none';
+    setRepeatType(currentRepeat);
+
+    // If no custom days set and we're starting fresh, auto-select current day
+    if (currentRepeat === 'none' || !task.customDays || task.customDays.length === 0) {
+      const currentDay = new Date(selectedDate + 'T00:00:00').getDay();
+      setCustomDays([currentDay]);
+    } else {
+      setCustomDays(task.customDays);
+    }
     setShowRepeatModal(true);
   };
 
-  // Filter tasks by selected date
-  const tasksForDate = tasks.filter(t => t.date === selectedDate);
+  // Check if a task should appear on a given date based on repeat settings
+  const shouldShowTaskOnDate = (task: Task, date: string): boolean => {
+    // Always show on the original date
+    if (task.date === date) return true;
+
+    // Don't show if no repeat or repeat is 'none'
+    if (!task.repeat || task.repeat === 'none') return false;
+
+    const taskDate = new Date(task.date + 'T00:00:00');
+    const checkDate = new Date(date + 'T00:00:00');
+
+    // Don't show tasks before their creation date
+    if (checkDate < taskDate) return false;
+
+    switch (task.repeat) {
+      case 'daily':
+        return true;
+
+      case 'weekly': {
+        // Same day of week
+        return taskDate.getDay() === checkDate.getDay();
+      }
+
+      case 'monthly': {
+        // Same day of month
+        return taskDate.getDate() === checkDate.getDate();
+      }
+
+      case 'custom': {
+        // Check if current day is in the custom days list
+        if (!task.customDays || task.customDays.length === 0) return false;
+        return task.customDays.includes(checkDate.getDay());
+      }
+
+      default:
+        return false;
+    }
+  };
+
+  // Check if a task is completed on a specific date
+  const isTaskCompletedOnDate = (task: Task, date: string): boolean => {
+    // Check if completed on original date
+    if (task.date === date && task.completed) return true;
+
+    // Check if completed on this specific repeated date
+    if (task.completedDates && task.completedDates.includes(date)) return true;
+
+    return false;
+  };
+
+  // Filter tasks by selected date and add the completion state for this specific date
+  const tasksForDate = tasks
+    .filter(t => shouldShowTaskOnDate(t, selectedDate))
+    .map(t => ({
+      ...t,
+      completed: isTaskCompletedOnDate(t, selectedDate) // Override completed with date-specific state
+    }));
   const todo = tasksForDate.filter(t => !t.completed);
   const done = tasksForDate.filter(t => t.completed);
 
@@ -649,9 +791,9 @@ export default function Taskerino() {
         for (let day = 1; day <= daysInMonth; day++) {
           const dayDate = new Date(selectedYear, month, day);
           const dayStr = formatDate(dayDate);
-          const dayTasks = tasks.filter(t => t.date === dayStr);
+          const dayTasks = tasks.filter(t => shouldShowTaskOnDate(t, dayStr));
           monthTaskCount += dayTasks.length;
-          if (dayTasks.some(t => !t.completed)) monthHasUnfinished = true;
+          if (dayTasks.some(t => !isTaskCompletedOnDate(t, dayStr))) monthHasUnfinished = true;
         }
 
         const monthName = new Date(selectedYear, month, 1).toLocaleDateString('en-US', { month: 'long' });
@@ -674,13 +816,13 @@ export default function Taskerino() {
         const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
         const dayDate = new Date(prevYear, prevMonth, day);
         const dayStr = formatDate(dayDate);
-        const dayTasks = tasks.filter(t => t.date === dayStr);
+        const dayTasks = tasks.filter(t => shouldShowTaskOnDate(t, dayStr));
         days.push({
           date: dayStr,
           day,
           label: day.toString(),
           taskCount: dayTasks.length,
-          hasUnfinished: dayTasks.some(t => !t.completed),
+          hasUnfinished: dayTasks.some(t => !isTaskCompletedOnDate(t, dayStr)),
           isCurrentMonth: false
         });
       }
@@ -689,13 +831,13 @@ export default function Taskerino() {
       for (let day = 1; day <= daysInMonth; day++) {
         const dayDate = new Date(selectedYear, selectedMonth, day);
         const dayStr = formatDate(dayDate);
-        const dayTasks = tasks.filter(t => t.date === dayStr);
+        const dayTasks = tasks.filter(t => shouldShowTaskOnDate(t, dayStr));
         days.push({
           date: dayStr,
           day,
           label: day.toString(),
           taskCount: dayTasks.length,
-          hasUnfinished: dayTasks.some(t => !t.completed),
+          hasUnfinished: dayTasks.some(t => !isTaskCompletedOnDate(t, dayStr)),
           isCurrentMonth: true
         });
       }
@@ -707,13 +849,13 @@ export default function Taskerino() {
         const nextYear = selectedMonth === 11 ? selectedYear + 1 : selectedYear;
         const dayDate = new Date(nextYear, nextMonth, day);
         const dayStr = formatDate(dayDate);
-        const dayTasks = tasks.filter(t => t.date === dayStr);
+        const dayTasks = tasks.filter(t => shouldShowTaskOnDate(t, dayStr));
         days.push({
           date: dayStr,
           day,
           label: day.toString(),
           taskCount: dayTasks.length,
-          hasUnfinished: dayTasks.some(t => !t.completed),
+          hasUnfinished: dayTasks.some(t => !isTaskCompletedOnDate(t, dayStr)),
           isCurrentMonth: false
         });
       }
@@ -733,7 +875,6 @@ export default function Taskerino() {
 
   // Calculate badge progress
   const getUnlockedBadges = () => {
-    const completedCount = tasks.filter(t => t.completed).length;
     const tasksCreated = tasks.length;
 
     return badges.map(badge => {
@@ -746,17 +887,13 @@ export default function Taskerino() {
           unlocked = tasksCreated >= badge.requirement;
           break;
         case 'completed':
-          progress = completedCount;
-          unlocked = completedCount >= badge.requirement;
+          // Use persistent total completed count instead of current completed tasks
+          progress = totalCompletedCount;
+          unlocked = totalCompletedCount >= badge.requirement;
           break;
         case 'streak':
           progress = currentStreak;
           unlocked = currentStreak >= badge.requirement;
-          break;
-        case 'perfect_day':
-        case 'productive_day':
-          // These would need more complex tracking, simplified for now
-          unlocked = false;
           break;
       }
 
@@ -776,7 +913,7 @@ export default function Taskerino() {
               <Mascot size={90} />
             </View>
             <Text style={[styles.title, { color: text }]}>Profile</Text>
-            <Text style={[styles.greeting, { color: textMuted }]}>You're doing amazing! 💚</Text>
+            <Text style={[styles.greeting, { color: textMuted }]}>Hey There!</Text>
           </View>
 
           <View style={styles.profileStats}>
@@ -794,7 +931,7 @@ export default function Taskerino() {
             </View>
           </View>
 
-          <ScrollView style={styles.badgesList} contentContainerStyle={{ paddingBottom: 100 }}>
+          <ScrollView style={styles.badgesList} contentContainerStyle={{ paddingBottom: 20 }}>
             {/* Achievements Section with Toggle */}
             <TouchableOpacity
               onPress={() => setShowAchievements(!showAchievements)}
@@ -871,28 +1008,6 @@ export default function Taskerino() {
                 </TouchableOpacity>
               ))}
             </View>
-
-            {/* Special Category */}
-            <Text style={[styles.badgeCategoryTitle, { color: textMuted }]}>🎯 Special Achievements</Text>
-            <View style={styles.badgesRow}>
-              {unlockedBadges.filter(b => b.type === 'perfect_day' || b.type === 'productive_day' || b.type === 'completion_streak').map((badge) => (
-                <TouchableOpacity
-                  key={badge.id}
-                  style={[styles.badgeMini, { backgroundColor: cardBg }, !badge.unlocked && styles.badgeMiniLocked]}
-                  onPress={() => {
-                    setSelectedBadge(badge);
-                    setShowBadgeModal(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.badgeMiniEmoji, !badge.unlocked && styles.badgeLocked]}>{badge.emoji}</Text>
-                  <Text style={[styles.badgeMiniTitle, { color: text }]}>{badge.title}</Text>
-                  {!badge.unlocked && (
-                    <Text style={[styles.badgeMiniProgress, { color: textMuted }]}>Locked</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
             </>
           )}
           </ScrollView>
@@ -960,7 +1075,7 @@ export default function Taskerino() {
               style={[styles.input, { color: text }]}
               value={goalInput}
               onChangeText={setGoalInput}
-              placeholder="Add a new goal..."
+              placeholder="Add a new goal"
               placeholderTextColor={textMuted}
               onSubmitEditing={addGoal}
             />
@@ -1074,7 +1189,7 @@ export default function Taskerino() {
             <Text style={[styles.greeting, { color: textMuted }]}>No pressure, just gentle guidance 💚</Text>
           </View>
 
-          <ScrollView style={styles.tipsList} contentContainerStyle={{ paddingBottom: 100 }}>
+          <ScrollView style={styles.tipsList} contentContainerStyle={{ paddingBottom: 20 }}>
             {tips.map((tip) => (
               <View key={tip.id} style={[styles.tipCard, { backgroundColor: cardBg }]}>
                 <Text style={styles.tipEmoji}>{tip.emoji}</Text>
@@ -1091,7 +1206,7 @@ export default function Taskerino() {
 
     if (currentTab === 'settings') {
       return (
-        <ScrollView style={{ paddingTop: insets.top + 20 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
+        <ScrollView style={{ paddingTop: insets.top + 20 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}>
           <View style={styles.settingsHeader}>
             <Text style={[styles.settingsTitle, { color: text }]}>Settings</Text>
             <Text style={[styles.settingsSubtitle, { color: textMuted }]}>Customize your experience</Text>
@@ -1290,7 +1405,7 @@ export default function Taskerino() {
           </View>
 
           {/* Support */}
-          <View style={styles.settingsSection}>
+          <View style={[styles.settingsSection, { marginBottom: 0 }]}>
             <Text style={[styles.settingsSectionTitle, { color: text }]}>Support</Text>
             <TouchableOpacity style={[styles.settingsCard, { backgroundColor: cardBg }]}>
               <Text style={[styles.settingsLink, { color: theme.primary }]}>Send Feedback</Text>
@@ -1360,13 +1475,16 @@ export default function Taskerino() {
             value={input}
             onChangeText={setInput}
             onSubmitEditing={addTask}
-            placeholder="What's on your mind?"
+            placeholder="Add a new task"
             placeholderTextColor={textMuted}
             maxLength={200}
             style={[styles.input, { color: text }]}
           />
           <TouchableOpacity
-            onPress={() => setShowRepeatModal(true)}
+            onPress={() => {
+              setEditingTaskId(null);
+              setShowRepeatModal(true);
+            }}
             style={[styles.repeatButton, { backgroundColor: repeatType !== 'none' ? theme.primary + '20' : 'transparent' }]}
             activeOpacity={0.7}
           >
@@ -1647,6 +1765,7 @@ export default function Taskerino() {
                     setCustomDays([]);
                   } else {
                     setRepeatType('none');
+                    setCustomDays([]);
                   }
                   setShowRepeatModal(false);
                 }}
@@ -1669,6 +1788,7 @@ export default function Taskerino() {
                     setCustomDays([]);
                   } else {
                     setRepeatType('daily');
+                    setCustomDays([]);
                   }
                   setShowRepeatModal(false);
                 }}
@@ -1691,6 +1811,7 @@ export default function Taskerino() {
                     setCustomDays([]);
                   } else {
                     setRepeatType('weekly');
+                    setCustomDays([]);
                   }
                   setShowRepeatModal(false);
                 }}
@@ -1713,6 +1834,7 @@ export default function Taskerino() {
                     setCustomDays([]);
                   } else {
                     setRepeatType('monthly');
+                    setCustomDays([]);
                   }
                   setShowRepeatModal(false);
                 }}
@@ -1725,6 +1847,11 @@ export default function Taskerino() {
               <TouchableOpacity
                 onPress={() => {
                   setRepeatType('custom');
+                  // Auto-select current day if no days selected yet
+                  if (customDays.length === 0) {
+                    const currentDay = new Date(selectedDate + 'T00:00:00').getDay();
+                    setCustomDays([currentDay]);
+                  }
                   // Don't close modal, show custom day picker
                 }}
                 style={[styles.languageOption, repeatType === 'custom' && { backgroundColor: theme.primary }]}
@@ -1823,7 +1950,7 @@ export default function Taskerino() {
               </Text>
               <TouchableOpacity onPress={() => {
                 setShowCalendarModal(false);
-                setCalendarViewMode('year');
+                setCalendarViewMode('month');
               }} style={styles.closeButton}>
                 <CloseIcon />
               </TouchableOpacity>
@@ -1971,14 +2098,21 @@ export default function Taskerino() {
         </View>
       </Modal>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
         {renderContent()}
       </ScrollView>
 
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { backgroundColor: cardBg, paddingBottom: insets.bottom }]}>
         <TouchableOpacity
-          onPress={() => setCurrentTab('tasks')}
+          onPress={() => {
+            setCurrentTab('tasks');
+            scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+          }}
           style={styles.navItem}
           activeOpacity={0.7}
         >
@@ -1988,7 +2122,10 @@ export default function Taskerino() {
 
         {goalsEnabled && (
           <TouchableOpacity
-            onPress={() => setCurrentTab('goals')}
+            onPress={() => {
+              setCurrentTab('goals');
+              scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            }}
             style={styles.navItem}
             activeOpacity={0.7}
           >
@@ -1999,7 +2136,10 @@ export default function Taskerino() {
 
         {tipsEnabled && (
           <TouchableOpacity
-            onPress={() => setCurrentTab('tips')}
+            onPress={() => {
+              setCurrentTab('tips');
+              scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            }}
             style={styles.navItem}
             activeOpacity={0.7}
           >
@@ -2010,7 +2150,10 @@ export default function Taskerino() {
 
         {profileEnabled && (
           <TouchableOpacity
-            onPress={() => setCurrentTab('profile')}
+            onPress={() => {
+              setCurrentTab('profile');
+              scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+            }}
             style={styles.navItem}
             activeOpacity={0.7}
           >
@@ -2020,7 +2163,10 @@ export default function Taskerino() {
         )}
 
         <TouchableOpacity
-          onPress={() => setCurrentTab('settings')}
+          onPress={() => {
+            setCurrentTab('settings');
+            scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+          }}
           style={styles.navItem}
           activeOpacity={0.7}
         >
@@ -2081,7 +2227,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   header: {
     alignItems: 'center',
