@@ -13,6 +13,10 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRevenueCat } from './src/hooks/useRevenueCat';
+import PaywallModal from './src/components/PaywallModal';
+import CustomPaywall from './src/components/CustomPaywall';
+import CustomerCenterModal from './src/components/CustomerCenterModal';
 
 const greetings = {
   morning: ["Good morning, superstar! ☀️", "Rise and shine! Ready to conquer?", "A fresh day, a fresh start!"],
@@ -392,6 +396,9 @@ const formatLongDate = (dateStr: string): string => {
 export default function Taskerino() {
   const insets = useSafeAreaInsets();
 
+  // RevenueCat subscription hook
+  const { isPro, subscriptionStatus } = useRevenueCat();
+
   // Theme state
   const [darkMode, setDarkMode] = useState(false);
   const [themeColor, setThemeColor] = useState<'sage' | 'ocean' | 'lavender' | 'coral' | 'rose' | 'midnight'>('sage');
@@ -432,6 +439,9 @@ export default function Taskerino() {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showRepeatModal, setShowRepeatModal] = useState(false);
   const [repeatType, setRepeatType] = useState<RepeatType>('none');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showCustomPaywall, setShowCustomPaywall] = useState(false);
+  const [showCustomerCenter, setShowCustomerCenter] = useState(false);
   const [customDays, setCustomDays] = useState<number[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [totalCompletedCount, setTotalCompletedCount] = useState<number>(0);
@@ -581,7 +591,10 @@ export default function Taskerino() {
   };
 
   const addGoal = () => {
-    if (!goalInput.trim()) return;
+    if (!goalInput.trim()) {
+      Alert.alert('Oops!', 'Please enter a goal first 😊');
+      return;
+    }
     setGoals([{ id: Date.now(), text: goalInput.trim(), completed: false }, ...goals]);
     setGoalInput('');
   };
@@ -628,7 +641,10 @@ export default function Taskerino() {
   };
 
   const addTask = () => {
-    if (!input.trim()) return;
+    if (!input.trim()) {
+      Alert.alert('Oops!', 'Please enter a task first 😊');
+      return;
+    }
     const newTask: Task = {
       id: Date.now(),
       text: input.trim(),
@@ -1300,17 +1316,23 @@ export default function Taskerino() {
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={[styles.settingsLabel, { color: text }]}>Goals</Text>
-                    <View style={styles.proBadgeSmall}>
-                      <Text style={styles.proBadgeSmallText}>PRO</Text>
-                    </View>
+                    {!isPro && (
+                      <View style={styles.proBadgeSmall}>
+                        <Text style={styles.proBadgeSmallText}>PRO</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={[styles.settingsDescription, { color: textMuted }]}>Show Goals in bottom menu</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => {
-                    // TODO: Check if user has Pro, otherwise show upgrade modal
-                    setGoalsEnabled(!goalsEnabled);
-                    saveSettings({ goalsEnabled: !goalsEnabled });
+                    if (!isPro) {
+                      // Show upgrade modal if not Pro
+                      setShowCustomPaywall(true);
+                    } else {
+                      setGoalsEnabled(!goalsEnabled);
+                      saveSettings({ goalsEnabled: !goalsEnabled });
+                    }
                   }}
                   style={[styles.toggle, { backgroundColor: goalsEnabled ? theme.primary : textMuted }, goalsEnabled && styles.toggleActive]}
                 >
@@ -1360,33 +1382,83 @@ export default function Taskerino() {
 
           {/* Pro Features */}
           <View style={styles.settingsSection}>
-            <Text style={[styles.settingsSectionTitle, { color: text }]}>Pro Features</Text>
+            <Text style={[styles.settingsSectionTitle, { color: text }]}>Subscription</Text>
 
-
-            {/* Pro Upgrade Card */}
-            <View style={[styles.proCard, { backgroundColor: cardBg }]}>
-              <View style={styles.proHeader}>
-                <Text style={[styles.proTitle, { color: text }]}>Upgrade to Pro</Text>
-                <View style={styles.proBadge}>
-                  <Text style={styles.proBadgeText}>✨ Premium</Text>
+            {isPro ? (
+              /* Pro Status Card */
+              <View style={[styles.proCard, { backgroundColor: cardBg, borderColor: colors.mint }]}>
+                <View style={styles.proHeader}>
+                  <Text style={[styles.proTitle, { color: text }]}>Taskerino Pro</Text>
+                  <View style={[styles.proBadge, { backgroundColor: colors.mint }]}>
+                    <Text style={styles.proBadgeText}>✓ Active</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={[styles.proDescription, { color: textMuted }]}>Unlock powerful features and support development!</Text>
+                <Text style={[styles.proDescription, { color: textMuted }]}>
+                  {subscriptionStatus.isActive
+                    ? subscriptionStatus.willRenew
+                      ? 'Your subscription is active and will renew automatically.'
+                      : 'Your subscription is active until the end of the current period.'
+                    : 'Thank you for being a Pro member!'}
+                </Text>
 
-              <View style={styles.proFeatures}>
-                <View style={styles.proFeature}>
-                  <Text style={styles.proFeatureIcon}>🎯</Text>
-                  <Text style={[styles.proFeatureText, { color: text }]}>Goals tracking</Text>
+                {subscriptionStatus.expirationDate && (
+                  <Text style={[styles.proDescription, { color: textMuted, marginTop: 8 }]}>
+                    {subscriptionStatus.willRenew ? 'Renews' : 'Expires'} on{' '}
+                    {subscriptionStatus.expirationDate.toLocaleDateString()}
+                  </Text>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.proButton, { backgroundColor: theme.primary }]}
+                  onPress={() => setShowCustomerCenter(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.proButtonText}>Manage Subscription</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Pro Upgrade Card */
+              <View style={[styles.proCard, { backgroundColor: cardBg }]}>
+                <View style={styles.proHeader}>
+                  <Text style={[styles.proTitle, { color: text }]}>Upgrade to Pro</Text>
+                  <View style={styles.proBadge}>
+                    <Text style={styles.proBadgeText}>✨ Premium</Text>
+                  </View>
                 </View>
-              </View>
+                <Text style={[styles.proDescription, { color: textMuted }]}>
+                  Unlock powerful features and support development!
+                </Text>
 
-              <TouchableOpacity style={[styles.proButton, { backgroundColor: theme.primary }]} activeOpacity={0.8}>
-                <Text style={styles.proButtonText}>Get Pro - $4.99/month</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.restoreButton}>
-                <Text style={[styles.restoreButtonText, { color: textMuted }]}>Restore Purchase</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.proFeatures}>
+                  <View style={styles.proFeature}>
+                    <Text style={styles.proFeatureIcon}>🎯</Text>
+                    <Text style={[styles.proFeatureText, { color: text }]}>Goals tracking</Text>
+                  </View>
+                  <View style={styles.proFeature}>
+                    <Text style={styles.proFeatureIcon}>🎨</Text>
+                    <Text style={[styles.proFeatureText, { color: text }]}>Custom themes</Text>
+                  </View>
+                  <View style={styles.proFeature}>
+                    <Text style={styles.proFeatureIcon}>☁️</Text>
+                    <Text style={[styles.proFeatureText, { color: text }]}>Cloud sync (coming soon)</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.proButton, { backgroundColor: theme.primary }]}
+                  onPress={() => setShowCustomPaywall(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.proButtonText}>See Plans & Pricing</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.restoreButton}
+                  onPress={() => setShowCustomerCenter(true)}
+                >
+                  <Text style={[styles.restoreButtonText, { color: textMuted }]}>Restore Purchase</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* App Info */}
@@ -2174,6 +2246,36 @@ export default function Taskerino() {
           <Text style={[styles.navLabel, { color: currentTab === 'settings' ? theme.primary : textMuted }]}>Settings</Text>
         </TouchableOpacity>
       </View>
+
+      {/* RevenueCat Paywalls & Customer Center */}
+      <PaywallModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onPurchaseSuccess={() => {
+          // Refresh app state after successful purchase
+          if (isPro) {
+            setGoalsEnabled(true);
+            saveSettings({ goalsEnabled: true });
+          }
+        }}
+      />
+
+      <CustomPaywall
+        visible={showCustomPaywall}
+        onClose={() => setShowCustomPaywall(false)}
+        onPurchaseSuccess={() => {
+          // Refresh app state after successful purchase
+          if (isPro) {
+            setGoalsEnabled(true);
+            saveSettings({ goalsEnabled: true });
+          }
+        }}
+      />
+
+      <CustomerCenterModal
+        visible={showCustomerCenter}
+        onClose={() => setShowCustomerCenter(false)}
+      />
     </View>
   );
 }
